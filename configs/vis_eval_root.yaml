@@ -1,0 +1,115 @@
+defaults:
+  - logging: vis_eval
+  - _self_
+  - model/sam@model.sam_generator.model: sam_vit_huge
+  - model@model.model: ???
+
+model:
+  _target_: sam_pt.modeling.vis_to_vos_adapter.SamBasedVisToVosAdapter
+  max_num_masks: 100
+  masks_batch_size: 100
+  visualize_results: true
+  max_videos_to_visualize: 30
+  sam_generator:
+    _target_: segment_anything.automatic_mask_generator.SamAutomaticMaskGenerator
+    model: ???
+    points_per_side: 32
+    points_per_batch: 64
+    pred_iou_thresh: 0.88
+    stability_score_thresh: 0.95
+    stability_score_offset: 1.0
+    box_nms_thresh: 0.7
+    crop_n_layers: 0
+    crop_nms_thresh: 0.7
+    crop_overlap_ratio: 512 / 1500
+    crop_n_points_downscale_factor: 1
+    point_grids: null
+    min_mask_region_area: 0
+    output_mode: "binary_mask"
+
+output: results
+
+device: cuda
+num_gpus_per_machine: 1
+num_machines: 1
+machine_rank: 0
+dist_url: tcp://127.0.0.1:27036
+
+DETECTRON2_CONFIG:
+  CUDNN_BENCHMARK: false
+  DATALOADER:
+    ASPECT_RATIO_GROUPING: true
+    FILTER_EMPTY_ANNOTATIONS: false
+    NUM_WORKERS: 0
+    REPEAT_THRESHOLD: 0.0
+    SAMPLER_TRAIN: TrainingSampler
+  DATASETS:
+    PRECOMPUTED_PROPOSAL_TOPK_TEST: 1000
+    PRECOMPUTED_PROPOSAL_TOPK_TRAIN: 2000
+    PROPOSAL_FILES_TEST: [ ]
+    PROPOSAL_FILES_TRAIN: [ ]
+    TEST:
+      - uvo_v1_val
+    TRAIN:
+      - null
+  GLOBAL:
+    HACK: 1.0
+  INPUT:
+    AUGMENTATIONS: [ ]
+    COLOR_AUG_SSD: false
+    CROP:
+      ENABLED: false
+      SINGLE_CATEGORY_MAX_AREA: 1.0
+      SIZE:
+        - 600
+        - 720
+      TYPE: absolute_range
+    DATASET_MAPPER_NAME: mask_former_semantic
+    FORMAT: RGB
+    IMAGE_SIZE: 1024
+    MASK_FORMAT: polygon
+    MAX_SCALE: 2.0
+    MAX_SIZE_TEST: 1333
+    MAX_SIZE_TRAIN: 1333
+    MIN_SCALE: 0.1
+    MIN_SIZE_TEST: 360
+    MIN_SIZE_TRAIN:
+      - 360
+      - 480
+    MIN_SIZE_TRAIN_SAMPLING: choice_by_clip
+    RANDOM_FLIP: flip_by_clip
+    SAMPLING_FRAME_NUM: 2
+    SAMPLING_FRAME_RANGE: 20
+    SAMPLING_FRAME_SHUFFLE: false
+    SIZE_DIVISIBILITY: -1
+  MODEL:
+    MASK_ON: false
+    SEM_SEG_HEAD:
+      NUM_CLASSES: 54
+    LOAD_PROPOSALS: false
+  OUTPUT_DIR: ${ output }
+  SEED: -1
+  TEST:
+    AUG:
+      ENABLED: false
+      FLIP: true
+      MAX_SIZE: 4000
+      MIN_SIZES:
+        - 400
+        - 500
+        - 600
+        - 700
+        - 800
+        - 900
+        - 1000
+        - 1100
+        - 1200
+    DETECTIONS_PER_IMAGE: 10
+    EVAL_PERIOD: 0
+    EXPECTED_RESULTS: [ ]
+    KEYPOINT_OKS_SIGMAS: [ ]
+    PRECISE_BN:
+      ENABLED: false
+      NUM_ITER: 200
+  VERSION: 2
+  VIS_PERIOD: 0

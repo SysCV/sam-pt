@@ -1,0 +1,27 @@
+defaults:
+  - image_encoder: vit_huge
+  - prompt_encoder: sam
+  - mask_decoder: sam
+  - _self_
+
+_target_: sam_pt.modeling.sam.SamHQHydra
+
+checkpoint: ${hydra:runtime.cwd}/models/samhq_ckpts/sam_hq_vit_h.pth
+
+prompt_embed_dim: 256
+image_size: 1024
+vit_patch_size: 16
+image_embedding_size: 64
+
+pixel_mean: [ 123.675, 116.28, 103.53 ]
+pixel_std: [ 58.395, 57.12, 57.375 ]
+
+image_encoder:
+  _target_: segment_anything_hq.modeling.image_encoder.ImageEncoderViT
+
+prompt_encoder:
+  _target_: segment_anything_hq.modeling.prompt_encoder.PromptEncoder
+
+mask_decoder:
+  _target_: segment_anything_hq.modeling.mask_decoder_hq.MaskDecoderHQ
+  vit_dim: ${..image_encoder.embed_dim}

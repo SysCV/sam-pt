@@ -1,0 +1,2 @@
+_target_: sam_pt.point_tracker.raft.RaftPointTracker
+checkpoint_path: "${hydra:runtime.cwd}/models/raft_ckpts/raft-things.pth"

@@ -1,0 +1,5 @@
+_target_: sam_pt.point_tracker.pips.PipsPointTracker
+checkpoint_path: "${hydra:runtime.cwd}/models/pips_ckpts/reference_model"
+stride: 4
+s: 8
+initial_next_frame_visibility_threshold: 0.9

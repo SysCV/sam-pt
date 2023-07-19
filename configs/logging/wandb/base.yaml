@@ -1,0 +1,4 @@
+entity: null
+project: ???
+tensorboard: true
+log_code_path: ${hydra:runtime.cwd}/sam_pt

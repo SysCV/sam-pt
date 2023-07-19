@@ -1,0 +1,49 @@
+_target_: sam_pt.modeling.sam_pt.SamPt
+
+defaults:
+  - point_tracker: pips
+  - sam@sam_predictor.sam_model: sam_vit_huge
+
+sam_predictor:
+  _target_: segment_anything.predictor.SamPredictor
+
+sam_iou_threshold: 0.7
+
+iterative_refinement_iterations: 12
+
+positive_point_selection_method: "kmedoids" # kmedoids, shi-tomasi, random, mixed
+negative_point_selection_method: "mixed" # kmedoids, shi-tomasi, random, mixed
+positive_points_per_mask: 8
+negative_points_per_mask: 1
+add_other_objects_positive_points_as_negative_points: true
+
+point_tracker_mask_batch_size: 5
+
+use_patch_matching_filtering: false
+patch_size: 3
+patch_similarity_threshold: 0.01
+
+use_point_reinit: false
+reinit_point_tracker_horizon: 8
+reinit_horizon: 8
+reinit_variant: "reinit-on-horizon-and-sync-masks"
+# Reinitialization variants:
+#  A) reinit-on-horizon-and-sync-masks:
+#     - simplest variant: reinitialize the points after a fixed number of
+#       frames (e.g., every 8 frames) can fail if the mask happens to be
+#       empty at the reinitialization timestep
+#     - as fast as not using reinit
+#  B) reinit-at-median-of-area-diff:
+#     - reinitialize points for the non-empty mask with the mean mask area
+#     - multiple times slower than no reinit, as many sam masks will be
+#       rejected (e.g., 8 masks were computed, but we might reinit on the
+#       second one, recomputing the rejected masks in the next step again)
+#  C) reinit-on-similar-mask-area:
+#     - reinit when the mask area is similar to the initial mask area
+#     - multiple times slower than no reinit
+#  D) reinit-on-similar-mask-area-and-sync-masks:
+#     - reinit when the mask area is similar to the initial mask area for
+#       all masks in the batch and synchronize the masks to be tracked from
+#       the same timestep, as to be able to use negative points from other
+#       masks when querying sam
+#     - multiple times slower than no reinit

@@ -1,0 +1,9 @@
+_target_: segment_anything.modeling.prompt_encoder.PromptEncoder
+embed_dim: ${ ..prompt_embed_dim }
+image_embedding_size:
+  - ${ ...image_embedding_size }
+  - ${ ...image_embedding_size }
+input_image_size:
+  - ${ ...image_size }
+  - ${ ...image_size }
+mask_in_chans: 16

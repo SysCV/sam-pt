@@ -1,0 +1,9 @@
+# JAX version requirements, recommended to be installed following JAX's instructions here: https://github.com/google/jax#installation
+#    jax==0.4.11
+#    jaxlib==0.4.11
+
+jaxline==0.0.5
+chex==0.1.7
+dm-haiku==0.0.9
+optax==0.1.5
+einshape@git+https://github.com/deepmind/einshape

@@ -1,0 +1,5 @@
+defaults:
+  - sam_vit_base
+  - override image_encoder: vit_huge
+
+checkpoint: ${hydra:runtime.cwd}/models/sam_ckpts/sam_vit_h_4b8939.pth

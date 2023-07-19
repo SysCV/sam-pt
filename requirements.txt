@@ -1,0 +1,28 @@
+# Torch version requirements, recommended to be installed w/o pip:
+#    torch==1.12.0
+#    torchvision==0.13.0
+
+tensorflow==2.12.1
+einops==0.4.1
+opencv-python==4.7.0.72
+timm==0.9.2
+
+numpy==1.24.3
+h5py==3.9.0
+Pillow==9.5.0
+pandas==1.5.3
+matplotlib==3.5.1
+seaborn==0.12.2
+scikit-learn==1.1.1
+scikit-learn-extra==0.3.0
+
+hydra-core==1.3.2
+wandb==0.15.3
+imageio==2.31.1
+moviepy==1.0.3
+
+git+https://github.com/facebookresearch/detectron2@v0.6
+git+https://github.com/davisvideochallenge/davis2017-evaluation.git@ac7c43fca936f9722837b7fbd337d284ba37004b
+git+https://github.com/facebookresearch/segment-anything.git@aac76a1fb03cf90dc7cb2ad481d511642e51aeba
+git+https://github.com/ChaoningZhang/MobileSAM.git@01ea8d0f5590082f0c1ceb0a3e2272593f20154b
+git+https://github.com/m43/sam-hq.git@75c73fa27b32435f33119d08a47788db4601e1da

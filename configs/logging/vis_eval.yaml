@@ -1,0 +1,6 @@
+defaults:
+  - wandb: base
+
+exp_id: eval
+wandb:
+  project: point-tracking-for-vis

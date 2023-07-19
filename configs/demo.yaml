@@ -1,0 +1,27 @@
+defaults:
+  - model: sam_pt
+  - logging: base
+  - _self_
+
+logging:
+  wandb:
+    project: demo
+
+model:
+  iterative_refinement_iterations: 12
+  add_other_objects_positive_points_as_negative_points: true
+  use_point_reinit: false
+  positive_points_per_mask: -1
+  negative_points_per_mask: -1
+
+frames_path: ${hydra:runtime.cwd}/data/demo_data/bees # Path to the folder with frames of the video
+query_points_path: ${hydra:runtime.cwd}/data/demo_data/query_points__bees.txt # Path or null
+
+longest_side_length: 1024 # Resize the image so that the longest side is of this length
+frame_stride: 1 # Evaluate on every n frames
+max_frames: null # Maximum number of video frames to evaluate for
+
+seed: 72
+
+annot_size: 16 # Size of the point annotations in visualisations
+annot_line_width: 6 # Line width of the point annotations in visualisations

@@ -1,0 +1,10 @@
+defaults:
+  - vis_eval_root
+  - override model@model.model: sam_pt
+  - _self_
+
+model:
+  model:
+    point_tracker_mask_batch_size: 100
+    sam_predictor:
+      sam_model: ${ ...sam_generator.model }

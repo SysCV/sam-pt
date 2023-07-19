@@ -1,0 +1,16 @@
+defaults:
+  - image_encoder: vit_base
+  - prompt_encoder: sam
+  - mask_decoder: sam
+
+_target_: sam_pt.modeling.sam.SamHydra
+
+checkpoint: ${hydra:runtime.cwd}/models/sam_ckpts/sam_vit_b_01ec64.pth
+
+prompt_embed_dim: 256
+image_size: 1024
+vit_patch_size: 16
+image_embedding_size: 64
+
+pixel_mean: [ 123.675, 116.28, 103.53 ]
+pixel_std: [ 58.395, 57.12, 57.375 ]

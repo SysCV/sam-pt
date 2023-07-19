@@ -1,0 +1,6 @@
+defaults:
+  - vit_base
+depth: 24
+embed_dim: 1024
+num_heads: 16
+global_attn_indexes: [ 5, 11, 17, 23 ]

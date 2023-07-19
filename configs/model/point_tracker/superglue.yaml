@@ -1,0 +1,21 @@
+_target_: sam_pt.point_tracker.superglue.SuperGluePointTracker
+
+positive_points_per_mask: ${..positive_points_per_mask}
+negative_points_per_mask: ${..negative_points_per_mask}
+
+#resize: [ 640, 480 ]
+resize: [ -1, -1 ]
+
+matching_config:
+  superpoint:
+    checkpoint: ${hydra:runtime.cwd}/models/superglue_ckpts/superpoint_v1.pth
+    nms_radius: 3
+    keypoint_threshold: 0.005
+    max_keypoints: -1
+    descriptor_dim: 256
+    remove_borders: 4
+  superglue:
+    #checkpoint: ${hydra:runtime.cwd}/models/superglue_ckpts/superglue_indoor.pth
+    checkpoint: ${hydra:runtime.cwd}/models/superglue_ckpts/superglue_outdoor.pth
+    sinkhorn_iterations: 20
+    match_threshold: 0.2

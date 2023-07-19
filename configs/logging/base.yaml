@@ -1,0 +1,5 @@
+defaults:
+  - wandb: base
+
+debug: false
+exp_id: debug
