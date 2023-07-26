@@ -5,7 +5,6 @@ from os import path
 import hydra
 import numpy as np
 import os
-import random
 import shutil
 import time
 import torch
@@ -19,8 +18,10 @@ from omegaconf import OmegaConf, DictConfig
 from torch.utils.data import DataLoader
 from tqdm import tqdm
 
+from sam_pt.modeling.sam_pt import SamPt
+from sam_pt.point_tracker.cotracker import CoTrackerPointTracker
 from sam_pt.utils.query_points import extract_kmedoid_points
-from sam_pt.utils.util import visualize_predictions
+from sam_pt.utils.util import visualize_predictions, seed_all
 from sam_pt.vos_eval.data.mask_mapper import MaskMapper
 from sam_pt.vos_eval.data.test_datasets import LongTestDataset, DAVISTestDataset, YouTubeVOSTestDataset, \
     MOSETestDataset
@@ -34,10 +35,7 @@ except ImportError:
 
 
 def evaluate(cfg):
-    random.seed(cfg.seed)
-    np.random.seed(cfg.seed)
-    torch.manual_seed(cfg.seed)
-    torch.cuda.manual_seed_all(cfg.seed)
+    seed_all(cfg.seed)
 
     cfg.logging.exp_id = f"{cfg.logging.exp_id}" \
                          f"_{cfg.dataset}" \
@@ -139,6 +137,11 @@ def evaluate(cfg):
     # Load our checkpoint
     model = instantiate(cfg.model)
     model = model.to("cuda" if torch.cuda.is_available() else "cpu").eval()
+    # If CoTracker is used, the seed needs to be set again since building the model changed the seed
+    if isinstance(model, SamPt) and isinstance(model.point_tracker, CoTrackerPointTracker):
+        print('CoTracker is used, setting seed again.')
+        seed_all(cfg.seed)
+
     vos_evaluator: VOSEvaluator = instantiate(cfg.evaluator, cfg=cfg, model=model)
 
     total_process_time = 0

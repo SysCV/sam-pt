@@ -16,11 +16,12 @@ python -m sam_pt.vos_eval.eval model=sam_pt
 
 ### Using Different Point Trackers
 
-The flexibility of SAM-PT allows for the usage of different point trackers. To specify a different point tracker, append it to the command. For instance, to use RAFT or TapNet as the point trackers, execute the following:
+The flexibility of SAM-PT allows for the usage of different point trackers. To specify a different point tracker, append it to the command. For instance, to use RAFT, TapNet, or CoTracker as the point tracker, execute the following:
 
 ```bash
 python -m sam_pt.vos_eval.eval model=sam_pt model/point_tracker=raft
 python -m sam_pt.vos_eval.eval model=sam_pt model/point_tracker=tapnet
+python -m sam_pt.vos_eval.eval model=sam_pt model/point_tracker=cotracker
 ```
 
 For more point trackers to chose from, see the available ones in [`configs/model/point_tracker`](../configs/model/point_tracker), or implement a new one by implementing the interface defined by [`sam_pt.point_tracker.tracker.PointTracker`](../sam_pt/point_tracker/tracker.py).

@@ -30,7 +30,11 @@ For replicating all experiments in the paper, you will need additional checkpoin
 
 ```py
 # tree --du -h models
-[8.5G]  models
+[8.8G]  models
+├── [277M]  cotracker_ckpts
+│   ├── [ 92M]  cotracker_stride_4_wind_12.pth
+│   ├── [ 92M]  cotracker_stride_4_wind_8.pth
+│   └── [ 92M]  cotracker_stride_8_wind_16.pth
 ├── [328M]  pips_ckpts
 │   └── [328M]  reference_model
 │       └── [328M]  model-000200000.pth
@@ -68,6 +72,9 @@ Additionally, these are the md5 sums of the checkpoints we have used:
 
 ```bash
 # find models -type f -print0 | sort -z | xargs -r0 md5sum
+f13ab80f04b2cb58945e2dffb5a3a44c  models/cotracker_ckpts/cotracker_stride_4_wind_12.pth
+82c458ad5de9bf98bc337c34ccbc436a  models/cotracker_ckpts/cotracker_stride_4_wind_8.pth
+d0d25fe323b20d11c447aaa05a923650  models/cotracker_ckpts/cotracker_stride_8_wind_16.pth
 9f34c4cd5d6f54cb11e1911841ac702c  models/pips_ckpts/reference_model/model-000200000.pth
 37d7c11dccc199c915580562651d85dd  models/raft_ckpts/raft-chairs.pth
 e5882fe9b35e1a7cb80537f6f859179f  models/raft_ckpts/raft-kitti.pth
@@ -181,6 +188,17 @@ mkdir models/superglue_ckpts
 wget --output-document models/superglue_ckpts/superglue_indoor.pth https://github.com/magicleap/SuperGluePretrainedNetwork/raw/ddcf11f42e7e0732a0c4607648f9448ea8d73590/models/weights/superglue_indoor.pth
 wget --output-document models/superglue_ckpts/superglue_outdoor.pth https://github.com/magicleap/SuperGluePretrainedNetwork/raw/ddcf11f42e7e0732a0c4607648f9448ea8d73590/models/weights/superglue_outdoor.pth
 wget --output-document models/superglue_ckpts/superpoint_v1.pth https://github.com/magicleap/SuperGluePretrainedNetwork/raw/ddcf11f42e7e0732a0c4607648f9448ea8d73590/models/weights/superpoint_v1.pth 
+```
+
+### CoTracker
+
+Source: [facebookresearch/co-tracker](https://github.com/facebookresearch/co-tracker)
+
+```bash
+mkdir models/cotracker_ckpts
+wget --output-document models/cotracker_ckpts/cotracker_stride_4_wind_8.pth https://dl.fbaipublicfiles.com/cotracker/cotracker_stride_4_wind_8.pth
+wget --output-document models/cotracker_ckpts/cotracker_stride_4_wind_12.pth https://dl.fbaipublicfiles.com/cotracker/cotracker_stride_4_wind_12.pth
+wget --output-document models/cotracker_ckpts/cotracker_stride_8_wind_16.pth https://dl.fbaipublicfiles.com/cotracker/cotracker_stride_8_wind_16.pth
 ```
 
 ## What's Next?

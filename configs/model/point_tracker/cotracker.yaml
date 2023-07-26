@@ -1,0 +1,11 @@
+_target_: sam_pt.point_tracker.cotracker.CoTrackerPointTracker
+checkpoint_path: "${hydra:runtime.cwd}/models/cotracker_ckpts/cotracker_stride_4_wind_8.pth"
+#checkpoint_path: "${hydra:runtime.cwd}/models/cotracker_ckpts/cotracker_stride_4_wind_12.pth"
+#checkpoint_path: "${hydra:runtime.cwd}/models/cotracker_ckpts/cotracker_stride_8_wind_16.pth"
+
+interp_shape: [384, 512]
+visibility_threshold: 0.7
+support_grid_size: 2
+support_grid_every_n_frames: 12
+
+add_debug_visualisations: false

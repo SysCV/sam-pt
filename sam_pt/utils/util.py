@@ -1,3 +1,5 @@
+import os
+
 import cv2
 import math
 import matplotlib.pyplot as plt
@@ -224,13 +226,17 @@ def seed_all(seed):
     None
     """
     random.seed(seed)
+    os.environ["PYTHONHASHSEED"] = str(seed)
     np.random.seed(seed)
     torch.manual_seed(seed)
-    torch.cuda.manual_seed_all(seed)
+    torch.cuda.manual_seed(seed)
+    torch.backends.cudnn.deterministic = True
+    torch.backends.cudnn.benchmark = False
 
 
-def log_video_to_wandb(log_key: str, frames: List[np.ndarray], step: Optional[int] = None, fmt: str = "gif",
-                       fps: int = 4) -> None:
+def log_video_to_wandb(log_key: str, frames: List[np.ndarray],
+                       step: Optional[int] = None, commit: Optional[bool] = None,
+                       fmt: str = "gif", fps: int = 4) -> None:
     """
     Log a video to Wandb.
 
@@ -242,6 +248,8 @@ def log_video_to_wandb(log_key: str, frames: List[np.ndarray], step: Optional[in
         The frames of the video to be logged. Each frame should be a 3D numpy array.
     step : int, optional
         The step at which to log the video. If None, the step is automatically determined by wandb.
+    commit : bool, optional
+        If true, increments the logging step and saves the data to the wandb server.
     fmt : str, default 'gif'
         The format of the video to be logged.
     fps : int, default 4
@@ -253,7 +261,7 @@ def log_video_to_wandb(log_key: str, frames: List[np.ndarray], step: Optional[in
     """
     frames_4d = np.stack(frames, axis=0)
     frames_4d = frames_4d.transpose((0, 3, 1, 2))
-    wandb.log({log_key: wandb.Video(frames_4d, format=fmt, fps=fps)}, step=step)
+    wandb.log({log_key: wandb.Video(frames_4d, format=fmt, fps=fps)}, step=step, commit=commit)
 
 
 class PointVisibilityType(IntEnum):
