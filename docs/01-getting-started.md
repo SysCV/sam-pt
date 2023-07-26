@@ -52,6 +52,8 @@ mkdir data/demo_data/street
 ffmpeg -i data/demo_data/street.mp4 -vf fps=10 data/demo_data/street/frame-%05d.png
 ```
 
+Before running the demo, you additionally have to make sure to have the SAM and PIPS checkpoints downloaded, as described under [minimal checkpoints](03-prepare-checkpoints.md#minimal-checkpoints).
+
 ### Running the Interactive Demo
 
 The interactive demo allows you to specify query points using mouse clicks on a pop-up window. This requires a GUI environment, which is typically available on personal computers. If you're using remote GPUs, you may need to set up X forwarding.

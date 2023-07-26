@@ -178,7 +178,7 @@ def visualize_and_save_predictions(rgbs, query_points, target_hw, positive_point
     while True:
         img = predictions_with_trajectories[i % len(predictions_with_trajectories)]
         img = img[:, :, ::-1]
-        cv2.imshow('img', img)
+        cv2.imshow('sam-pt demo', img)
         sleep(0.2)
         k = cv2.waitKey(1)
         # If user presses 'esc' exit
@@ -332,11 +332,11 @@ def load_demo_data_interactive(frames_path, query_points_path, frame_stride, lon
                       f'or press esc to exit.')
                 print()
 
-    cv2.namedWindow('img')
-    cv2.setMouseCallback('img', callback)
+    cv2.namedWindow('sam-pt demo', flags=cv2.WINDOW_AUTOSIZE | cv2.WINDOW_KEEPRATIO | cv2.WINDOW_GUI_NORMAL)
+    cv2.setMouseCallback('sam-pt demo', callback)
     # Mainloop - show the image and collect the data
     while True:
-        cv2.imshow('img', img)
+        cv2.imshow('sam-pt demo', img)
         # Wait, and allow the user to quit with the 'esc' key
         k = cv2.waitKey(1)
         # If user presses 'esc' exit
