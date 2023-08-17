@@ -21,7 +21,7 @@ The flexibility of SAM-PT allows for the usage of different point trackers. To s
 ```bash
 python -m sam_pt.vos_eval.eval model=sam_pt model/point_tracker=raft
 python -m sam_pt.vos_eval.eval model=sam_pt model/point_tracker=tapnet
-python -m sam_pt.vos_eval.eval model=sam_pt model/point_tracker=cotracker
+python -m sam_pt.vos_eval.eval model=sam_pt model/point_tracker=cotracker model.positive_points_per_mask=16
 ```
 
 For more point trackers to chose from, see the available ones in [`configs/model/point_tracker`](../configs/model/point_tracker), or implement a new one by implementing the interface defined by [`sam_pt.point_tracker.tracker.PointTracker`](../sam_pt/point_tracker/tracker.py).
