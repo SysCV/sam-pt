@@ -9,7 +9,7 @@
 
 We propose SAM-PT, an extension of the [Segment Anything Model](https://github.com/facebookresearch/segment-anything) (SAM) for zero-shot video segmentation. Our work offers a simple yet effective point-based perspective in video object segmentation research. For more details, refer to our paper. Our code, models, and evaluation tools will be released soon. Stay tuned!
 
-## Interactive Video Segmentation Demo
+## Video Object Segmentation Demo
 
 Annotators only provide a few points to denote the target object at the first video frame to get video segmentation results. Please visit our [project page](https://www.vis.xyz/pub/sam-pt/) for more visualizations, including qualitative results on DAVIS 2017 videos and more Avatar clips.
 <p float="left">
@@ -17,6 +17,15 @@ Annotators only provide a few points to denote the target object at the first vi
   <img alt="bees" src="assets/bees.gif?raw=true" width="48%" /> 
   <img alt="avatar" src="assets/avatar.gif?raw=true" width="48%" />
   <img alt="horsejump-high" src="assets/horsejump-high.gif?raw=true" width="48%" />
+</p>
+
+## Interactive Point-Based Video Segmentation
+
+Annotators can interactively add or remove points to refine the segmentation results.
+<p float="left">
+  <img alt="camel" src="assets/interactive-camel.gif?raw=true" width="96.5%" />
+  <img alt="drift" src="assets/interactive-drift-straight.gif?raw=true" width="96.5%" />
+  <img alt="loading" src="assets/interactive-loading.gif?raw=true" width="96.5%" />
 </p>
 
 ## Documentation
@@ -28,27 +37,9 @@ Explore our step-by-step guides to get up and running:
 3. [Prepare Checkpoints](./docs/03-prepare-checkpoints.md): Steps to fetch model checkpoints.
 4. [Running Experiments](./docs/04-running-experiments.md): Details on how to execute experiments.
 
-## Semi-supervised Video Object Segmentation (VOS)
-
-SAM-PT is the first method to utilize sparse point tracking combined with SAM for video segmentation. With such compact mask representation, we achieve the highest $\mathcal{J\\&F}$ scores on the DAVIS 2016 and 2017 validation subsets among methods that do not utilize any video segmentation data during training.
-
-![table-1](assets/table-1.png?raw=true)
-
-Quantitative results in semi-supervised VOS on the validation subsets of DAVIS 2017, YouTube-VOS 2018, and MOSE 2023:
-
-![table-3](assets/table-3.png?raw=true)
-![table-4](assets/table-4.png?raw=true)
-![table-5](assets/table-5.png?raw=true)
-
-## Video Instance Segmentation (VIS)
-
-On the validation split of UVO VideoDenseSet v1.0, SAM-PT outperforms TAM even though the former was not trained on any video segmentation data. TAM is a concurrent approach combining SAM and XMem, where XMem was pre-trained on BL30K and trained on DAVIS and YouTube-VOS, but not on UVO. On the other hand, SAM-PT combines SAM with the PIPS point tracking method, both of which have not been trained on any video segmentation tasks.
-
-![table-6](assets/table-6.png?raw=true)
-
 ## Acknowledgments
 
-We want to thank [SAM](https://github.com/facebookresearch/segment-anything), [PIPS](https://github.com/aharley/pips), [HQ-SAM](https://github.com/SysCV/sam-hq), [MobileSAM](https://github.com/ChaoningZhang/MobileSAM), [XMem](https://github.com/hkchengrex/XMem), and [Mask2Former](https://github.com/facebookresearch/Mask2Former) for publicly releasing their code and pretrained models.
+We want to thank [SAM](https://github.com/facebookresearch/segment-anything), [PIPS](https://github.com/aharley/pips), [CoTracker](https://github.com/facebookresearch/co-tracker), [HQ-SAM](https://github.com/SysCV/sam-hq), [MobileSAM](https://github.com/ChaoningZhang/MobileSAM), [XMem](https://github.com/hkchengrex/XMem), and [Mask2Former](https://github.com/facebookresearch/Mask2Former) for publicly releasing their code and pretrained models.
 
 ## Citation
 

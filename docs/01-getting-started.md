@@ -64,12 +64,14 @@ Note that the [`${hydra:runtime.cwd}`](https://hydra.cc/docs/1.3/configure_hydra
 
 ```bash
 # Run demo on bees.mp4
+export HYDRA_FULL_ERROR=1
 python -m demo.demo \
   frames_path='${hydra:runtime.cwd}/data/demo_data/bees/' \
   query_points_path=null \
   longest_side_length=1024 frame_stride=1 max_frames=-1
 
 # Run demo on street.mp4
+export HYDRA_FULL_ERROR=1
 python -m demo.demo \
   frames_path='${hydra:runtime.cwd}/data/demo_data/street/' \
   query_points_path=null \
@@ -82,12 +84,14 @@ You also have the option to run the demo in a non-interactive mode where query p
 
 ```bash
 # Run non-interactive demo on bees.mp4
+export HYDRA_FULL_ERROR=1
 python -m demo.demo \
   frames_path='${hydra:runtime.cwd}/data/demo_data/bees/' \
   query_points_path='${hydra:runtime.cwd}/data/demo_data/query_points__bees.txt' \
   longest_side_length=1024 frame_stride=1 max_frames=-1
 
 # Run non-interactive demo on street.mp4
+export HYDRA_FULL_ERROR=1
 python -m demo.demo \
   frames_path='${hydra:runtime.cwd}/data/demo_data/street/' \
   query_points_path='${hydra:runtime.cwd}/data/demo_data/query_points__street.txt' \
