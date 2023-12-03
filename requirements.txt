@@ -28,4 +28,4 @@ git+https://github.com/davisvideochallenge/davis2017-evaluation.git@ac7c43fca936
 git+https://github.com/facebookresearch/segment-anything.git@aac76a1fb03cf90dc7cb2ad481d511642e51aeba
 git+https://github.com/ChaoningZhang/MobileSAM.git@01ea8d0f5590082f0c1ceb0a3e2272593f20154b
 git+https://github.com/m43/sam-hq.git@75c73fa27b32435f33119d08a47788db4601e1da
-git+https://github.com/facebookresearch/co-tracker.git@d7d1e92742e1477d5f069de8b43afb5eb4feca66
+git+https://github.com/facebookresearch/co-tracker.git@4f297a92fe1a684b1b0980da138b706d62e45472
