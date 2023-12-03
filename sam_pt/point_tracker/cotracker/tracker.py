@@ -3,10 +3,25 @@ import numpy as np
 import torch
 import torch.nn.functional as F
 from cotracker.models.build_cotracker import build_cotracker
+from cotracker.models.core.cotracker.cotracker import CoTracker
 from cotracker.models.core.cotracker.cotracker import get_points_on_a_grid
 
 from sam_pt.point_tracker.tracker import PointTracker
-from sam_pt.utils.util import log_video_to_wandb
+
+
+class CoTrackerForShortVideosWrapper(CoTracker):
+    def __init__(self, cotracker_model):
+        super().__init__()
+        self.cotracker_model = cotracker_model
+
+    def __call__(self, rgbs, *args, **kwargs):
+        n_frames = rgbs.shape[1]
+        min_frames = self.cotracker_model.S
+        if rgbs.shape[1] < min_frames:
+            rgbs = torch.cat([rgbs, rgbs[:, -1:, :, :, :].repeat(1, min_frames - rgbs.shape[1], 1, 1, 1)], dim=1)
+        traj_e, feat_init, vis_e, train_data = self.cotracker_model(rgbs=rgbs, *args, **kwargs)
+        assert train_data is None, "Not tested for train_data not being None."
+        return traj_e[:, :n_frames], feat_init[:, :n_frames], vis_e[:, :n_frames], train_data
 
 
 class CoTrackerPointTracker(PointTracker):
@@ -47,6 +62,8 @@ class CoTrackerPointTracker(PointTracker):
         if torch.cuda.is_available():
             self.model.to("cuda")
         self.model.eval()
+
+        self.model = CoTrackerForShortVideosWrapper(self.model)
 
     @property
     def device(self):
@@ -120,7 +137,7 @@ class CoTrackerPointTracker(PointTracker):
             name = f"cotracker-trajectories--{timestamp}--{random.randint(0, 1000)}.gif"
             print(f"Saving debug visualisation to {os.path.abspath(name)}")
             import imageio
-            imageio.mimsave(name, frames_with_trajectories, duration=(1000 * 1/fps), loop=0)
+            imageio.mimsave(name, frames_with_trajectories, duration=(1000 * 1 / fps), loop=0)
             print("Saved.")
             # log_video_to_wandb("debug/cotracker-trajectories", frames_with_trajectories, fps=fps)
 
