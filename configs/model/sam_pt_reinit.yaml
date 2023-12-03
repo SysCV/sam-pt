@@ -1,6 +1,0 @@
-defaults:
-  - sam_pt
-  - _self_
-
-use_point_reinit: true
-negative_points_per_mask: 72

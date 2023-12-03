@@ -1,6 +1,7 @@
 """
 A module which combines SAM (segment anything) with point tracking to perform video segmentation.
 """
+from typing import Optional
 
 import numpy as np
 import torch
@@ -34,6 +35,7 @@ class SamPt(nn.Module):
             positive_points_per_mask: int,
             negative_points_per_mask: int,
             add_other_objects_positive_points_as_negative_points: bool,
+            max_other_objects_positive_points: Optional[int],
             point_tracker_mask_batch_size: int,
             iterative_refinement_iterations: bool,
             use_patch_matching_filtering: bool,
@@ -63,6 +65,8 @@ class SamPt(nn.Module):
             The number of negative points per mask.
         add_other_objects_positive_points_as_negative_points : bool
             If True, the positive points of other objects are added as negative points when using the SamPredictor.
+        max_other_objects_positive_points : Optional[int]
+            The maximum number of positive points of other objects to be added as negative points.
         point_tracker_mask_batch_size : int
             The batch size for the point tracker mask.
         iterative_refinement_iterations : bool
@@ -98,6 +102,7 @@ class SamPt(nn.Module):
         self.positive_points_per_mask = positive_points_per_mask
         self.negative_points_per_mask = negative_points_per_mask
         self.add_other_objects_positive_points_as_negative_points = add_other_objects_positive_points_as_negative_points
+        self.max_other_objects_positive_points = max_other_objects_positive_points
 
         self.point_tracker_mask_batch_size = point_tracker_mask_batch_size
 
@@ -165,13 +170,13 @@ class SamPt(nn.Module):
         # Prepare queries
         if video.get("query_masks") is not None:  # E.g., when evaluating on the VOS task
             assert video.get("query_points") is None
-            print("SAM: Using query masks")
+            print("SAM-PT: Using query masks")
             query_masks = video["query_masks"].float()
             query_points_timestep = video["query_point_timestep"]
             query_points = self.extract_query_points(images, query_masks, query_points_timestep)
             query_scores = None
         elif video.get("query_points") is not None:  # E.g., when evaluating on the railway demo
-            print("SAM: Using query points")
+            print("SAM-PT: Using query points")
             query_points = video["query_points"]
             query_masks = self.extract_query_masks(images, query_points)
             query_scores = None
@@ -735,8 +740,12 @@ class SamPt(nn.Module):
                     visibilities[frame_idx, other_mask_idx, :self.positive_points_per_mask] == 1, :]
                     for other_mask_idx in range(n_masks) if other_mask_idx != mask_idx
                 ], dim=0).cpu().numpy()
-                other_objects_positive_point_labels = np.zeros((len(other_objects_positive_point_coords)),
-                                                               dtype=int)
+                if self.max_other_objects_positive_points is not None and len(
+                        other_objects_positive_point_coords) > self.max_other_objects_positive_points:
+                    n = len(other_objects_positive_point_coords)
+                    indices = np.random.choice(n, self.max_other_objects_positive_points, replace=False)
+                    other_objects_positive_point_coords = other_objects_positive_point_coords[indices, :]
+                other_objects_positive_point_labels = np.zeros((len(other_objects_positive_point_coords)), dtype=int)
                 visible_point_coords = np.concatenate(
                     [visible_point_coords, other_objects_positive_point_coords],
                     axis=0,

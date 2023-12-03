@@ -1,3 +1,3 @@
 _target_: sam_pt.point_tracker.tapir.TapirPointTracker
-checkpoint_path: "${hydra:runtime.cwd}/models/tapir_ckpts/open_source_ckpt/causal_tapir_checkpoint.npy"
-visibility_threshold: 0.5
+checkpoint_path: "${hydra:runtime.cwd}/models/tapir_ckpts/open_source_ckpt/tapir_checkpoint_panning.npy"
+visibility_threshold: 0.1

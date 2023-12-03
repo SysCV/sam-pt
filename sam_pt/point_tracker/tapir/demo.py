@@ -31,9 +31,14 @@ if __name__ == '__main__':
     tf.config.experimental.set_visible_devices([], 'TPU')
 
     # 2. Prepare model
-    checkpoint = np.load(checkpoint_dir + "causal_tapir_checkpoint.npy", allow_pickle=True).item()
+    checkpoint = np.load(checkpoint_dir + "tapir_checkpoint_panning.npy", allow_pickle=True).item()
     params, state = checkpoint["params"], checkpoint["state"]
-    tapir_model_kwargs = config.experiment_kwargs.config.shared_modules["tapir_model_kwargs"]
+    # tapir_model_kwargs = config.experiment_kwargs.config.shared_modules["tapir_model_kwargs"]
+    tapir_model_kwargs = {
+        "bilinear_interp_with_depthwise_conv": False,
+        "pyramid_level": 0,
+        "use_causal_conv": False,
+    }
 
 
     def forward(rgbs, query_points):
@@ -70,12 +75,21 @@ if __name__ == '__main__':
     rgbs_tapir = F.interpolate(rgbs / 255, tapir_input_hw, mode="bilinear", align_corners=False, antialias=True)
     rgbs_tapir = rgbs_tapir.numpy() * 2 - 1
     rgbs_tapir = rgbs_tapir.transpose(0, 2, 3, 1)
+
+    ## Take the loaded query points
+    # query_points = query_points
+    ## Or make a 16x16 grid of query points
+    query_points = torch.zeros((1, 16, 16, 3), dtype=torch.float32)
+    query_points[:, :, :, 0] = 1
+    query_points[:, :, :, 1] = torch.linspace(1, original_hw[1] - 1, 16)
+    query_points[:, :, :, 2] = torch.linspace(1, original_hw[0] - 1, 16).unsqueeze(-1)
+    query_points = query_points.reshape(1, -1, 3)
+
     query_points_tapir = query_points.clone()
     query_points_tapir[:, :, 1:] *= rescale_factor_hw.flip(0)
     query_points_tapir = query_points_tapir.flatten(0, 1)
     query_points_tapir[:, 1:] = query_points_tapir[:, 1:].flip(-1)
     query_points_tapir = query_points_tapir.numpy()
-    query_points_tapir = query_points_tapir
 
     # 4. Run model
     outputs = jitted_f(rgbs_tapir, query_points_tapir)
@@ -99,26 +113,28 @@ if __name__ == '__main__':
     trajectories = trajectories / rescale_factor_hw.flip(-1)
 
     # 6. Visualize
-    for mask_idx in range(n_masks):
-        if mask_idx != 2:
-            continue
-        for frame_idx in range(n_frames):
-            h, w = rgbs.shape[2], rgbs.shape[3]
-            dpi = 100
-            plt.figure(figsize=(w / dpi, h / dpi))
-            plt.imshow(rgbs[frame_idx].permute(1, 2, 0).numpy(), interpolation="none")
-            x = trajectories[frame_idx, mask_idx, :, 0]
-            y = trajectories[frame_idx, mask_idx, :, 1]
-            colors = cm.rainbow(np.linspace(0, 1, len(y)))
-            v = visibilities[frame_idx, mask_idx, :]
-            x = x[v]
-            y = y[v]
-            colors = colors[v]
-            plt.title(f"F{frame_idx:02}-M{mask_idx:02}-V{(visibilities_probs[frame_idx, mask_idx, :] * 1)}")
-            plt.scatter(x, y, color=colors, linewidths=36)
-            plt.axis("off")
-            plt.tight_layout(pad=0)
-            plt.show()
+    mask_idx = -1
+    for frame_idx in range(n_frames):
+        h, w = rgbs.shape[2], rgbs.shape[3]
+        dpi = 100
+        plt.figure(figsize=(w / dpi, h / dpi))
+        plt.imshow(rgbs[frame_idx].permute(1, 2, 0).numpy(), interpolation="none")
+        x = trajectories[frame_idx, mask_idx, :, 0]
+        y = trajectories[frame_idx, mask_idx, :, 1]
+        colors = cm.rainbow(np.linspace(0, 1, len(y)))
+        v = visibilities[frame_idx, mask_idx, :]
+        # v = (visibilities[frame_idx, mask_idx, :] * 0) == 0
+        x = x[v]
+        y = y[v]
+        colors = colors[v]
+        plt.title(f"F{frame_idx:02}-M{mask_idx:02}-V{(visibilities_probs[frame_idx, mask_idx, :5] * 1)}")
+        plt.scatter(x, y, color=colors, linewidths=6)
+        plt.xlim(trajectories[..., 0].min(), trajectories[..., 0].max())
+        plt.ylim(trajectories[..., 1].max(), trajectories[..., 1].min())
+        plt.axis("off")
+        plt.tight_layout(pad=0)
+        plt.show()
+        time.sleep(0.1)
 
     # 7. Benchmark forward pass speed in for loop
     n_loops = 100

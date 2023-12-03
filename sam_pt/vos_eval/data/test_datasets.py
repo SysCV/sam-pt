@@ -4,6 +4,8 @@ import json
 import os
 from os import path
 
+import numpy as np
+
 from .video_reader import VideoReader
 
 
@@ -32,7 +34,7 @@ class LongTestDataset:
 
 
 class DAVISTestDataset:
-    def __init__(self, data_root, imset='2017/val.txt', size=-1, longest_size=None):
+    def __init__(self, data_root, imset='2017/val.txt', size=-1, longest_size=None, return_all_gt_masks=False):
         if size != 480:
             self.image_dir = path.join(data_root, 'JPEGImages', 'Full-Resolution')
             self.mask_dir = path.join(data_root, 'Annotations', 'Full-Resolution')
@@ -47,6 +49,7 @@ class DAVISTestDataset:
         self.size_dir = path.join(data_root, 'JPEGImages', '480p')
         self.size = size
         self.longest_size = longest_size
+        self.return_all_gt_masks = return_all_gt_masks
 
         with open(path.join(data_root, 'ImageSets', imset)) as f:
             self.vid_list = sorted([line.strip() for line in f])
@@ -58,7 +61,8 @@ class DAVISTestDataset:
                               path.join(self.mask_dir, video),
                               shortest_size=self.size,
                               longest_size=self.longest_size,
-                              size_dir=path.join(self.size_dir, video))
+                              size_dir=path.join(self.size_dir, video),
+                              use_all_mask=self.return_all_gt_masks)
 
     def __len__(self):
         return len(self.vid_list)
@@ -129,6 +133,39 @@ class MOSETestDataset:
                 shortest_size=self.shortest_size,
                 longest_size=self.longest_size,
                 use_all_mask=True,
+            )
+
+    def __len__(self):
+        return len(self.vid_list)
+
+
+class BDD100KTestDataset:
+    def __init__(self, data_root, split, shortest_size=-1, longest_size=None):
+        self.shortest_size = shortest_size
+        self.longest_size = longest_size
+
+        self.image_dir = path.abspath(path.join(data_root, split, 'JPEGImages'))
+        self.mask_dir = path.abspath(path.join(data_root, split, 'Annotations'))
+
+        print(f'BDD100K-{split}: {self.image_dir}')
+        print(f'BDD100K-{split}: {self.mask_dir}')
+        assert path.exists(self.image_dir)
+        assert path.exists(self.mask_dir)
+
+        self.vid_list = sorted(os.listdir(self.image_dir))
+        print(f'BDD100K-{split}: Found {len(self.vid_list)} videos in {self.image_dir}')
+
+    def get_datasets(self):
+        for video in self.vid_list:
+            yield VideoReader(
+                vid_name=video,
+                image_dir=path.join(self.image_dir, video),
+                mask_dir=path.join(self.mask_dir, video),
+                shortest_size=self.shortest_size,
+                longest_size=self.longest_size,
+                use_all_mask=True,
+                # mask_mode='I;16',
+                # mask_dtype=np.int32,
             )
 
     def __len__(self):

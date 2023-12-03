@@ -1,7 +1,30 @@
-# Taken from: https://github.com/aharley/pips/blob/486124b4236bb228a20750b496f0fa8aa6343157/utils/misc.py
+# Adapted from:
+#   - https://github.com/aharley/pips/blob/486124b4236bb228a20750b496f0fa8aa6343157/utils/misc.py
+#   - https://github.com/aharley/pips2/blob/06bff81f25f2866728ff94f5d3a02c00893a8f15/utils/misc.py
+
 
 import numpy as np
 import torch
+
+
+def posemb_sincos_2d_xy(xy, C, temperature=10000, cat_coords=False):
+    device = xy.device
+    dtype = xy.dtype
+    B, S, D = xy.shape
+    assert (D == 2)
+    x = xy[:, :, 0]
+    y = xy[:, :, 1]
+    assert (C % 4) == 0, 'feature dimension must be multiple of 4 for sincos emb'
+    omega = torch.arange(C // 4, device=device) / (C // 4 - 1)
+    omega = 1. / (temperature ** omega)
+
+    y = y.flatten()[:, None] * omega[None, :]
+    x = x.flatten()[:, None] * omega[None, :]
+    pe = torch.cat((x.sin(), x.cos(), y.sin(), y.cos()), dim=1)
+    pe = pe.reshape(B, S, C).type(dtype)
+    if cat_coords:
+        pe = torch.cat([pe, xy], dim=2)  # B,N,C+2
+    return pe
 
 
 def get_3d_embedding(xyz, C, cat_coords=True):

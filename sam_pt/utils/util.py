@@ -1,17 +1,17 @@
 import os
+import pathlib
+import random
+import time
+from datetime import datetime
+from enum import IntEnum
+from typing import List, Any, Optional, Tuple
 
 import cv2
 import math
 import matplotlib.pyplot as plt
 import numpy as np
-import pathlib
-import random
-import time
 import torch
 import wandb
-from datetime import datetime
-from enum import IntEnum
-from typing import List, Any, Optional, Tuple
 
 
 class Object(object):
@@ -348,6 +348,8 @@ def visualize_predictions(
         annot_line_width=4,
         visualize_query_masks=True,
         contour_radius=3,
+        verbose=True,
+        log_fmt="mp4",
 ):
     """
     Visualize predictions of query masks, predicted masks, and trajectories onto images and log them to wandb.
@@ -393,6 +395,8 @@ def visualize_predictions(
         If True, visualize the query masks. Default is True.
     contour_radius : int, optional
         The radius for the contour around each mask. Default is 3.
+    verbose : bool, optional
+        If True, log verbose visualisations to wandb. Takes more time. Default is True.
 
     Returns
     -------
@@ -449,7 +453,8 @@ def visualize_predictions(
 
     # 1. Visualize the input frames
     frames = images.permute(0, 2, 3, 1).cpu().numpy()
-    log_video_to_wandb("verbose/input-only", frames, fps=fps, step=step)
+    if verbose:
+        log_video_to_wandb("verbose/input-only", frames, fps=fps, step=step, fmt=log_fmt)
 
     # 2. Visualize the query masks
     if visualize_query_masks:
@@ -465,7 +470,8 @@ def visualize_predictions(
             wandb_masks = {"mask2former_prediction": {"mask_data": query_mask}}
             wandb_caption = f"mask={mask_idx}: m2f_score={query_scores[mask_idx].item():.3f} query_frame={query_timestep}"
             wandb_image = wandb.Image(frame, caption=wandb_caption, masks=wandb_masks)
-            wandb.log({f"verbose/query-proposals/mask-{mask_idx}": wandb_image}, step=step)
+            if verbose:
+                wandb.log({f"verbose/query-proposals/mask-{mask_idx}": wandb_image}, step=step)
         # 2.1. version 2 - using cv2 to create the mask overlay by hand
         for mask_idx, mask_query_points in enumerate(query_points):
             query_timestep = int(mask_query_points[0][0])
@@ -506,7 +512,8 @@ def visualize_predictions(
             masked_image = add_mask_to_frame(masked_image, contour_mask, [1, 1, 1], alpha=0.1)
         masked_image = put_debug_text_onto_image(masked_image, frame_debug_text[frame_idx])
         masked_images += [masked_image]
-    log_video_to_wandb("verbose/predictions-only", masked_images, fps=fps, step=step)
+    if verbose:
+        log_video_to_wandb("verbose/predictions-only", masked_images, fps=fps, step=step, fmt=log_fmt)
 
     # 3.2. Add the predicted trajectories on top of the predicted masks
     for frame_idx in range(n_frames):
@@ -539,7 +546,8 @@ def visualize_predictions(
                 masked_image = cv2.putText(masked_image, f"{i:03}", (int(point[0]), int(point[1])),
                                            fontFace=cv2.FONT_HERSHEY_SIMPLEX, fontScale=0.3, color=(250, 225, 100))
         masked_images[frame_idx] = masked_image
-    log_video_to_wandb("verbose/predictions-with-trajectories", masked_images, fps=fps, step=step)
+    if verbose:
+        log_video_to_wandb("verbose/predictions-with-trajectories", masked_images, fps=fps, step=step, fmt=log_fmt)
 
     # 4. Visualize the input frames with the predicted trajectories
     frames_with_trajectories = frames.copy()
@@ -577,7 +585,8 @@ def visualize_predictions(
         frames_with_trajectories[frame_idx] = put_debug_text_onto_image(
             frames_with_trajectories[frame_idx], frame_debug_text[frame_idx]
         )
-    log_video_to_wandb("verbose/input-with-trajectories", frames_with_trajectories, fps=fps, step=step)
+    if verbose:
+        log_video_to_wandb("verbose/input-with-trajectories", frames_with_trajectories, fps=fps, step=step, fmt=log_fmt)
 
     # 5. Visualize the input frames with the predicted trajectories and the predicted masks
     concatenated = [
@@ -595,7 +604,7 @@ def visualize_predictions(
             for additional_log_frame, frame
             in zip(additional_log_images, concatenated)
         ]
-    log_video_to_wandb("predictions/sam_video_masks", concatenated, fps=fps, step=step)
+    log_video_to_wandb("predictions/sam_video_masks", concatenated, fps=fps, step=step, fmt=log_fmt)
 
     print("Done visualizing predictions. Time taken: {:.2f}s".format(time.time() - start_time))
 

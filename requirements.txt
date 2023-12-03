@@ -24,7 +24,7 @@ moviepy==1.0.3
 mediapy==1.1.8
 
 git+https://github.com/facebookresearch/detectron2@v0.6
-git+https://github.com/davisvideochallenge/davis2017-evaluation.git@ac7c43fca936f9722837b7fbd337d284ba37004b
+git+https://github.com/m43/davis2016-davis2017-davis2019-evaluation.git@35401a5619757359673d9d1a7d9e02c177f06f7f
 git+https://github.com/facebookresearch/segment-anything.git@aac76a1fb03cf90dc7cb2ad481d511642e51aeba
 git+https://github.com/ChaoningZhang/MobileSAM.git@01ea8d0f5590082f0c1ceb0a3e2272593f20154b
 git+https://github.com/m43/sam-hq.git@75c73fa27b32435f33119d08a47788db4601e1da

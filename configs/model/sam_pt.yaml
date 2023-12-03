@@ -1,11 +1,11 @@
 _target_: sam_pt.modeling.sam_pt.SamPt
 
 defaults:
-  - point_tracker: pips
-  - sam@sam_predictor.sam_model: sam_vit_huge
+  - point_tracker: cotracker
+  - sam@sam_predictor.sam_model: samhq_vit_huge
 
 sam_predictor:
-  _target_: segment_anything.predictor.SamPredictor
+  _target_: segment_anything_hq.predictor.SamPredictor
 
 sam_iou_threshold: 0.7
 
@@ -13,9 +13,10 @@ iterative_refinement_iterations: 12
 
 positive_point_selection_method: "kmedoids" # kmedoids, shi-tomasi, random, mixed
 negative_point_selection_method: "mixed" # kmedoids, shi-tomasi, random, mixed
-positive_points_per_mask: 8
+positive_points_per_mask: 16
 negative_points_per_mask: 1
 add_other_objects_positive_points_as_negative_points: true
+max_other_objects_positive_points: null
 
 point_tracker_mask_batch_size: 5
 
@@ -24,9 +25,9 @@ patch_size: 3
 patch_similarity_threshold: 0.01
 
 use_point_reinit: false
-reinit_point_tracker_horizon: 8
-reinit_horizon: 8
-reinit_variant: "reinit-on-horizon-and-sync-masks"
+reinit_point_tracker_horizon: 24
+reinit_horizon: 24
+reinit_variant: "reinit-at-median-of-area-diff"
 # Reinitialization variants:
 #  A) reinit-on-horizon-and-sync-masks:
 #     - simplest variant: reinitialize the points after a fixed number of

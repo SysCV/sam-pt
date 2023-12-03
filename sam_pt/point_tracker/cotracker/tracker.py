@@ -53,6 +53,13 @@ class CoTrackerPointTracker(PointTracker):
         return self.model.norm.weight.device
 
     def forward(self, rgbs, query_points):
+        if self.add_debug_visualisations:
+            query_points_orig = query_points.clone()
+            rgbs_orig = rgbs.float()
+        if self.add_debug_visualisations:
+            query_points = query_points_orig.clone()
+            rgbs = rgbs_orig.clone()
+
         query_points = query_points.float()
         rgbs = rgbs.float()
 
@@ -71,10 +78,11 @@ class CoTrackerPointTracker(PointTracker):
         query_points[:, :, 1] *= self.interp_shape[1] / width
         query_points[:, :, 2] *= self.interp_shape[0] / height
 
-        for i in range(0, n_frames, self.support_grid_every_n_frames):
-            grid_pts = get_points_on_a_grid(self.support_grid_size, self.interp_shape)
-            grid_pts = torch.cat([i * torch.ones_like(grid_pts[:, :, :1]), grid_pts], dim=2)
-            query_points = torch.cat([query_points, grid_pts], dim=1)
+        if self.support_grid_size > 0:
+            for i in range(0, n_frames, self.support_grid_every_n_frames):
+                grid_pts = get_points_on_a_grid(self.support_grid_size, self.interp_shape)
+                grid_pts = torch.cat([i * torch.ones_like(grid_pts[:, :, :1]), grid_pts], dim=2)
+                query_points = torch.cat([query_points, grid_pts], dim=1)
 
         raw_trajectories, _, raw_visibilities, _ = self.model(rgbs=rgbs, queries=query_points, iters=6)
         raw_trajectories, raw_visibilities = \
@@ -106,7 +114,15 @@ class CoTrackerPointTracker(PointTracker):
                         fontFace=cv2.FONT_HERSHEY_SIMPLEX, fontScale=0.3,
                         color=(250, 225, 100)
                     )
-            log_video_to_wandb("debug/cotracker-trajectories", frames_with_trajectories, fps=fps)
+            # save to gif
+            import datetime, random, os
+            timestamp = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+            name = f"cotracker-trajectories--{timestamp}--{random.randint(0, 1000)}.gif"
+            print(f"Saving debug visualisation to {os.path.abspath(name)}")
+            import imageio
+            imageio.mimsave(name, frames_with_trajectories, duration=(1000 * 1/fps), loop=0)
+            print("Saved.")
+            # log_video_to_wandb("debug/cotracker-trajectories", frames_with_trajectories, fps=fps)
 
         trajectories = raw_trajectories[:, :, :n_points].clone()
         visibilities = raw_visibilities[:, :, :n_points].clone()

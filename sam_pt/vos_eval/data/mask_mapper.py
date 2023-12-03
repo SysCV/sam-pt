@@ -36,13 +36,13 @@ class MaskMapper:
         # if coherent, no mapping is required
         self.coherent = True
 
-    def convert_mask(self, mask, exhaustive=False):
+    def convert_mask(self, mask, exhaustive=False, dtype=np.uint8, old_labels_allowed=False):
         # mask is in index representation, H*W numpy array
-        labels = np.unique(mask).astype(np.uint8)
+        labels = np.unique(mask).astype(dtype)
         labels = labels[labels != 0].tolist()
 
         new_labels = list(set(labels) - set(self.labels))
-        if not exhaustive:
+        if not exhaustive and not old_labels_allowed:
             assert len(new_labels) == len(labels), 'Old labels found in non-exhaustive mode'
 
         # add new remappings

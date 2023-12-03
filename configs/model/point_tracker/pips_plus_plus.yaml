@@ -1,0 +1,6 @@
+_target_: sam_pt.point_tracker.pips_plus_plus.PipsPlusPlusPointTracker
+checkpoint_path: "${hydra:runtime.cwd}/models/pips_plus_plus_ckpts/reference_model"
+stride: 8
+max_sequence_length: 128
+iters: 16
+image_size: null  # [ 512, 896 ]

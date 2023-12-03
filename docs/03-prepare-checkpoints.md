@@ -14,15 +14,15 @@ If you're running our default variant, SAM-PT or SAM-PT-reinit, you'll only need
 
 ```py
 # tree --du -h models
-[2.7G]  models
-├── [328M]  pips_ckpts
-│   └── [328M]  reference_model
-│       └── [328M]  model-000200000.pth
-└── [2.4G]  sam_ckpts
-    └── [2.4G]  sam_vit_h_4b8939.pth
+[2.5G]  models
+├── [ 92M]  cotracker_ckpts
+│   └── [ 92M]  reference_model
+│       └── [ 92M]  cotracker_stride_4_wind_8.pth
+└── [2.4G]  samhq_ckpts
+    └── [2.4G]  sam_hq_vit_h.pth
 ```
 
-These can be fetched by following the instructions for [SAM](#sam) and [PIPS](#pips) provided below.
+These can be fetched by following the instructions for [HQ-SAM](#hq-sam-and-light-hq-sam) and [CoTracker](#cotracker) provided below.
 
 ## Complete Checkpoints
 
@@ -30,7 +30,7 @@ For replicating all experiments in the paper, you will need additional checkpoin
 
 ```py
 # tree --du -h models
-[8.8G]  models
+[9.3G]  models
 ├── [277M]  cotracker_ckpts
 │   ├── [ 92M]  cotracker_stride_4_wind_12.pth
 │   ├── [ 92M]  cotracker_stride_4_wind_8.pth
@@ -38,6 +38,9 @@ For replicating all experiments in the paper, you will need additional checkpoin
 ├── [328M]  pips_ckpts
 │   └── [328M]  reference_model
 │       └── [328M]  model-000200000.pth
+├── [402M]  pips_plus_plus_ckpts
+│   └── [402M]  reference_model
+│       └── [402M]  model-000200000.pth
 ├── [ 84M]  raft_ckpts
 │   ├── [ 20M]  raft-chairs.pth
 │   ├── [ 20M]  raft-kitti.pth
@@ -59,9 +62,10 @@ For replicating all experiments in the paper, you will need additional checkpoin
 │   ├── [ 46M]  superglue_indoor.pth
 │   ├── [ 46M]  superglue_outdoor.pth
 │   └── [5.0M]  superpoint_v1.pth
-├── [119M]  tapir_ckpts
-│   └── [119M]  open_source_ckpt
-│       └── [119M]  causal_tapir_checkpoint.npy
+├── [240M]  tapir_ckpts
+│   └── [240M]  open_source_ckpt
+│       ├── [121M]  causal_tapir_checkpoint.npy
+│       └── [119M]  tapir_checkpoint_panning.npy
 └── [ 43M]  tapnet_ckpts
     └── [ 43M]  open_source_ckpt
         ├── [ 32M]  checkpoint.npy
@@ -76,6 +80,7 @@ f13ab80f04b2cb58945e2dffb5a3a44c  models/cotracker_ckpts/cotracker_stride_4_wind
 82c458ad5de9bf98bc337c34ccbc436a  models/cotracker_ckpts/cotracker_stride_4_wind_8.pth
 d0d25fe323b20d11c447aaa05a923650  models/cotracker_ckpts/cotracker_stride_8_wind_16.pth
 9f34c4cd5d6f54cb11e1911841ac702c  models/pips_ckpts/reference_model/model-000200000.pth
+e599fd3ba978d67c4cf35f225be3c2af  models/pips_plus_plus_ckpts/reference_model/model-000200000.pth
 37d7c11dccc199c915580562651d85dd  models/raft_ckpts/raft-chairs.pth
 e5882fe9b35e1a7cb80537f6f859179f  models/raft_ckpts/raft-kitti.pth
 cc69e5da1f38673ab10d1849859ebe91  models/raft_ckpts/raft-sintel.pth
@@ -92,7 +97,8 @@ c6b8953247bcfdc8bb8ef91e36a6cacc  models/samhq_ckpts/sam_hq_vit_b.pth
 48053342712ef9a8e4663490b812ad50  models/superglue_ckpts/superglue_indoor.pth
 01191e832e901537324543963bea09a4  models/superglue_ckpts/superglue_outdoor.pth
 938af9f432d327751dcbc0d6c7a0448b  models/superglue_ckpts/superpoint_v1.pth
-598f0444a8d2e82e9bf5541b8ae829d9  models/tapir_ckpts/open_source_ckpt/causal_tapir_checkpoint.npy
+763a9dbdf9e077395217aaddc6c6f048  models/tapir_ckpts/open_source_ckpt/causal_tapir_checkpoint.npy
+73e86cdcfef0e8afea6a060f44be5fc7  models/tapir_ckpts/open_source_ckpt/tapir_checkpoint_panning.npy
 b8a1ad6eab94ce53be3ce870ed829552  models/tapnet_ckpts/open_source_ckpt/checkpoint.npy
 3e915fcb27a6fe39c46e1d5ed443d11a  models/tapnet_ckpts/open_source_ckpt/checkpoint_wo_optstate.npy
 ```
@@ -121,6 +127,17 @@ mkdir models/pips_ckpts
 wget --output-document models/pips_ckpts/reference_model.tar.gz https://www.dropbox.com/s/glk6jmoa9yeervl/reference_model.tar.gz
 tar xvf models/pips_ckpts/reference_model.tar.gz --directory models/pips_ckpts
 rm models/pips_ckpts/reference_model.tar.gz
+```
+
+### PIPS++
+
+Source: [aharley/pips2](https://github.com/aharley/pips2)
+
+```bash
+mkdir models/pips_plus_plus_ckpts
+wget --output-document models/pips_plus_plus_ckpts/reference_model.tar.gz https://www.dropbox.com/scl/fi/czdlt2zc2ji2b7zd0pvoe/reference_model.tar.gz?rlkey=56ebq4g5dk01kyq8kuismev14
+tar xvf models/pips_plus_plus_ckpts/reference_model.tar.gz --directory models/pips_plus_plus_ckpts
+rm models/pips_plus_plus_ckpts/reference_model.tar.gz
 ```
 
 ### HQ-SAM and Light HQ-SAM
@@ -163,6 +180,7 @@ Source: [deepmind/tapnet](https://github.com/deepmind/tapnet)
 mkdir models/tapir_ckpts
 mkdir models/tapir_ckpts/open_source_ckpt
 wget --output-document models/tapir_ckpts/open_source_ckpt/causal_tapir_checkpoint.npy https://storage.googleapis.com/dm-tapnet/causal_tapir_checkpoint.npy
+wget --output-document models/tapir_ckpts/open_source_ckpt/tapir_checkpoint_panning.npy https://storage.googleapis.com/dm-tapnet/tapir_checkpoint_panning.npy
 ```
 
 ### TapNet

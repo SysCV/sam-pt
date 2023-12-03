@@ -2,7 +2,7 @@
 
 **Important:** This guide is designed for users operating on a Unix-like system such as Linux or MacOS. 
 
-In this section, we'll walk you through the process of preparing the datasets required to conduct our experiments. For semi-supervised Video Object Segmentation (VOS), the following datasets are needed: [DAVIS 2016](#davis-2016), [DAVIS 2017](#davis-2017), [YouTube-VOS 2018](#youtube-vos-2018), and [MOSE 2023](#mose-2023). For Video Instance Segmentation (VIS) experiments, the [UVOv1.0](#uvo-v10) dataset will be utilized.
+In this section, we'll walk you through the process of preparing the datasets required to conduct our experiments. For semi-supervised Video Object Segmentation (VOS), the following datasets are needed: [DAVIS 2016](#davis-2016), [DAVIS 2017](#davis-2017), [YouTube-VOS 2018](#youtube-vos-2018), [MOSE 2023](#mose-2023), and [BDD100K](#bdd100k). For Video Instance Segmentation (VIS) experiments, the [UVOv1.0](#uvo-v10) dataset will be utilized.
 
 To begin, create a directory named `data` at the root of your project. This is where all the datasets will be stored:
 
@@ -22,6 +22,7 @@ Before proceeding to download and process the datasets, it is essential to verif
  7.3G   data/DAVIS/2017
  6.3G   data/YouTube2018
   26G   data/mose
+ 7.9G   data/bdd100k
  1.4T   data/UVOv1.0
 ```
 
@@ -200,6 +201,66 @@ data/mose
 ```
 
 With MOSE 2023 ready, all VOS datasets are ready for use in the experiments.
+
+## BDD100K
+
+The BDD100K dataset is available on their [official website](https://bdd-data.berkeley.edu/portal.html#download). You need to download `MOTS 2020 Images` and `MOTS 2020 Labels` and organize the downloaded data as follows:
+
+```txt
+data/bdd100k
+├── images
+│   └── seg_track_20
+│       ├── test
+│       ├── train
+│       └── val
+├── jsons
+└── labels
+    └── seg_track_20
+        ├── bitmasks
+        ├── colormaps
+        ├── polygons
+        └── rles
+```
+
+Then, to convert the MOTS data to a semi-supervised VOS dataset format, you can use our conversion script `scripts.bdd100k_from_instance_seg_to_vos_annotations` as follows:
+
+```bash
+# Prepare directories
+mkdir -p data/bdd100k/vos/val/{Annotations,JPEGImages}
+
+# Copy JPEGImages
+cp -r data/bdd100k/images/seg_track_20/val/* data/bdd100k/vos/val/JPEGImages/
+
+# Create the Annotations
+python -m scripts.bdd100k_from_instance_seg_to_vos_annotations
+
+# Link the chunks
+# e.g., data/bdd100k/vos/val/JPEGImages/b1c66a42-6f7d68ca-chunk2 -> b1c66a42-6f7d68ca/
+find data/bdd100k/vos/val/Annotations -type d -name "*-chunk*" | sed 's/Annotations/JPEGImages/' | while read -r src; do
+    tgt=$(basename "$src" | sed 's/-chunk.*//')
+    rm $src
+    ln -s "$tgt" "$src"
+done
+```
+
+This then gives the following directory structure:
+
+```txt
+data/bdd100k/vos
+└── val
+    ├── Annotations
+    │   ├── b1c66a42-6f7d68ca
+    │   ├── b1c66a42-6f7d68ca-chunk2
+    │   ├── b1c81faa-3df17267
+    │   ├── b1c81faa-c80764c5
+    │   └── ...
+    └── JPEGImages
+        ├── b1c66a42-6f7d68ca
+        ├── b1c66a42-6f7d68ca-chunk2 -> b1c66a42-6f7d68ca
+        ├── b1c81faa-3df17267
+        ├── b1c81faa-c80764c5
+        └── ...
+```
 
 ---
 ## UVO v1.0

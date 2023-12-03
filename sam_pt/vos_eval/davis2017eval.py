@@ -5,10 +5,11 @@ https://github.com/davisvideochallenge/davis2017-evaluation/blob/ac7c43fca936f97
 Usage:
 ```
 python -m sam_pt.vos_eval.davis2017eval \
-  --results_path outputs/2023-07-02/14-45-50/eval_D17_val/ \
+  --results_path /srv/beegfs02/scratch/visobt4s/data/3d_point_tracking/sampt_outputs/SegGPT--D17-val--in-sampt-env_D17_val_72_2023.11.09_15.52.53/eval_D17_val \
   --davis_path data/DAVIS/2017/trainval \
   --set val \
-  --task semi-supervised
+  --task semi-supervised \
+  --year 2017
 ```
 """
 
@@ -16,6 +17,7 @@ import argparse
 import os
 import sys
 from time import time
+from typing import Union
 
 import numpy as np
 import pandas as pd
@@ -23,13 +25,16 @@ from davis2017.evaluation import DAVISEvaluation
 
 
 class Davis2017Evaluator:
-    def __init__(self, results_path: str, davis_path: str, set: str = "val", task: str = "semi-unsupervised"):
+    def __init__(self, results_path: str, davis_path: str, set: str = "val", task: str = "semi-unsupervised",
+                 year: str = '2017', sequences: Union[str, list] = "all", ):
         """
         :param results_path: Path to the folder containing the sequences folders.
         :param davis_path: Path to the DAVIS folder containing the `JPEGImages`, `Annotations`, `ImageSets`,
                            `Annotations_unsupervised` folders.
         :param set: Subset to evaluate the results.
         :param task: Task to evaluate the results.
+        :param year: DAVIS dataset year.
+        :param sequences: List of sequences to evaluate. If "all", evaluate all sequences.
         """
         assert set in ['val', 'test-dev', 'test-challenge']
         assert task in ['semi-supervised', 'unsupervised']
@@ -37,6 +42,8 @@ class Davis2017Evaluator:
         self.davis_path = davis_path
         self.set = set
         self.task = task
+        self.year = year
+        self.sequences = sequences
         self.results_path = results_path
 
     def evaluate(self):
@@ -54,7 +61,8 @@ class Davis2017Evaluator:
         else:
             print(f'Evaluating sequences for the {self.task} task...')
             # Create dataset and evaluate
-            dataset_eval = DAVISEvaluation(davis_root=self.davis_path, task=self.task, gt_set=self.set)
+            dataset_eval = DAVISEvaluation(davis_root=self.davis_path, task=self.task, gt_set=self.set, year=self.year,
+                                           sequences=self.sequences)
             metrics_res = dataset_eval.evaluate(self.results_path)
             J, F = metrics_res['J'], metrics_res['F']
 
@@ -100,10 +108,21 @@ if __name__ == '__main__':
                              '`Annotations_unsupervised` folders.')
     parser.add_argument('--set', type=str, default='val', choices=['val', 'test-dev', 'test-challenge'],
                         help='Subset to evaluate the results.')
+    parser.add_argument('--eval_only_on_the_sequences_present_in_the_results', action='store_true',
+                        help='If True, evaluate only on the sequences present in the results folder.')
     parser.add_argument('--task', type=str, default='semi-supervised', choices=['semi-supervised', 'unsupervised'],
                         help='Task to evaluate the results.')
+    parser.add_argument("--year", type=str, help="Davis dataset year (default: 2017)", default='2017',
+                        choices=['2016', '2017', '2019'])
+
     args = parser.parse_args()
 
-    evaluator = Davis2017Evaluator(args.results_path, args.davis_path, args.set, args.task)
-    evaluator.evaluate()
+    sequences = 'all'
+    if args.eval_only_on_the_sequences_present_in_the_results:
+        assert os.path.exists(args.results_path)
+        sequences = sorted(os.listdir(args.results_path))
+        sequences = [s for s in sequences if s != "overlapping" and "." not in s]
+        print(f"Evaluating only on the sequences present in the results folder: {sequences}")
 
+    evaluator = Davis2017Evaluator(args.results_path, args.davis_path, args.set, args.task, args.year, sequences)
+    evaluator.evaluate()

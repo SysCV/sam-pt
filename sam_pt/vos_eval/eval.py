@@ -1,17 +1,16 @@
 # Adapted from: https://github.com/hkchengrex/XMem/blob/083698bbb4c5ac0ffe1a8923a6c313de46169983/eval.py
 
+import os
+import shutil
+import time
 from os import path
 
 import hydra
 import numpy as np
-import os
-import shutil
-import time
 import torch
 import torch.nn.functional as F
 import wandb
 from PIL import Image
-from datetime import datetime
 from hydra.core.hydra_config import HydraConfig
 from hydra.utils import instantiate
 from omegaconf import OmegaConf, DictConfig
@@ -19,36 +18,28 @@ from torch.utils.data import DataLoader
 from tqdm import tqdm
 
 from sam_pt.modeling.sam_pt import SamPt
+from sam_pt.modeling.sam_pt_interactive import SamPtInteractive
 from sam_pt.point_tracker.cotracker import CoTrackerPointTracker
 from sam_pt.utils.query_points import extract_kmedoid_points
 from sam_pt.utils.util import visualize_predictions, seed_all
+from sam_pt.vos_eval.bdd100keval import BDD100KEvaluator
 from sam_pt.vos_eval.data.mask_mapper import MaskMapper
 from sam_pt.vos_eval.data.test_datasets import LongTestDataset, DAVISTestDataset, YouTubeVOSTestDataset, \
-    MOSETestDataset
+    MOSETestDataset, BDD100KTestDataset
 from sam_pt.vos_eval.davis2017eval import Davis2017Evaluator
 from sam_pt.vos_eval.evaluator import VOSEvaluator
 
-try:
-    import hickle as hkl
-except ImportError:
-    print('Failed to import hickle. Fine if not using multi-scale testing.')
-
 
 def evaluate(cfg):
-    seed_all(cfg.seed)
-
-    cfg.logging.exp_id = f"{cfg.logging.exp_id}" \
-                         f"_{cfg.dataset}" \
-                         f"_{cfg.split}" \
-                         f"_{cfg.seed}" \
-                         f"_{datetime.now().strftime('%Y.%m.%d_%H.%M.%S')}"
     print(OmegaConf.to_yaml(cfg))
+
+    seed_all(cfg.seed)
 
     wandb.init(
         entity=cfg.logging.wandb.entity,
         project=cfg.logging.wandb.project,
-        name=cfg.logging.exp_id,
-        group=cfg.logging.exp_id,
+        name=cfg.logging.exp_id_verbose,
+        group=cfg.logging.exp_id_verbose,
         config={
             "cfg": OmegaConf.to_container(cfg, resolve=True, throw_on_missing=True),
             "work_dir": os.getcwd(),
@@ -93,7 +84,8 @@ def evaluate(cfg):
         elif cfg.dataset == 'D17':
             if cfg.split == 'val':
                 meta_dataset = DAVISTestDataset(path.join(cfg.d17_path, 'trainval'), imset='2017/val.txt',
-                                                size=cfg.size, longest_size=cfg.longest_size)
+                                                size=cfg.size, longest_size=cfg.longest_size,
+                                                return_all_gt_masks=cfg.simulate_interactive_point_correction)
             elif cfg.split == 'test':
                 meta_dataset = DAVISTestDataset(path.join(cfg.d17_path, 'test-dev'), imset='2017/test-dev.txt',
                                                 size=cfg.size, longest_size=cfg.longest_size)
@@ -116,6 +108,14 @@ def evaluate(cfg):
     elif cfg.dataset == 'MOSE':
         meta_dataset = MOSETestDataset(
             data_root=cfg.mose_path,
+            split=cfg.split,
+            shortest_size=cfg.size,
+            longest_size=cfg.longest_size,
+        )
+
+    elif cfg.dataset == 'BDD100K':
+        meta_dataset = BDD100KTestDataset(
+            data_root=cfg.bdd100k_path,
             split=cfg.split,
             shortest_size=cfg.size,
             longest_size=cfg.longest_size,
@@ -159,6 +159,9 @@ def evaluate(cfg):
 
         vid_name = vid_reader.vid_name
         print(f'Processing {vid_name}... [{vid_id + 1}/{len(meta_dataset)}]')
+        if os.path.exists(out_path) and vid_name in os.listdir(out_path):
+            print(f'Already processed {vid_name}, skipping...')
+            continue
 
         vid_length = len(vid_reader) if cfg.max_frames is None else min(len(vid_reader), cfg.max_frames)
         mapper = MaskMapper()
@@ -166,6 +169,7 @@ def evaluate(cfg):
         # Load all video frames
         rgbs = []
         infos = []
+        all_gt_masks = []
         gt_ti_list = []
         gt_mask_list = []
         gt_labels_list = []
@@ -183,13 +187,27 @@ def evaluate(cfg):
                 rgb = torch.flip(rgb, dims=[-1])
                 msk = torch.flip(msk, dims=[-1]) if msk is not None else None
 
+            if cfg.dataset == "BDD100K":
+                # BDD100K labels  have annotations for all visible objects at all frames,
+                # not only for the query frame where the object first appears.
+                # Thus, remove the other objects after their appearance from subsequent frames.
+                label_has_been_seen = (msk[:, :, :, None] == torch.tensor(mapper.labels)[None, None, None, :]).any(-1)
+                msk[label_has_been_seen] = 0
+                if msk.sum() == 0:
+                    msk = None
+
             if msk is not None:
                 assert msk.shape[0] == 1, "The mask should be in index representation, each integer being a class"
-                msk, labels = mapper.convert_mask(msk[0].numpy())
+                msk, new_mapped_labels = mapper.convert_mask(
+                    mask=msk[0].numpy(),
+                    old_labels_allowed=cfg.simulate_interactive_point_correction,
+                )
+                # msk, labels = mapper.convert_mask(msk[0].numpy(), dtype=np.uint8 if cfg.dataset != 'BDD100K' else np.int16)
                 msk = torch.Tensor(msk)
                 if need_resize:
                     msk = vid_reader.resize_mask(msk.unsqueeze(0))[0]
-                for l_remapped in labels:
+                all_gt_masks += [msk]
+                for l_remapped in new_mapped_labels:
                     remapping = {v: k for k, v in mapper.remappings.items()}
                     l_original = remapping[l_remapped]
                     if l_original not in gt_labels_list:
@@ -258,23 +276,37 @@ def evaluate(cfg):
         for i in range(0, n_masks, cfg.masks_batch_size):
             video = {
                 "video_name": vid_name,
-                "video_id": vid_id,
+                "video_id": f"{vid_id:03d}--{vid_name}--mask-{i}",
                 "image": rgbs,
                 "info": infos,
                 "target_hw": target_hw,
                 "query_masks": query_masks[i:i + cfg.masks_batch_size],
                 "query_point_timestep": query_point_timestep[i:i + cfg.masks_batch_size],
             }
+            if isinstance(model, SamPtInteractive):
+                assert len(all_gt_masks) == len(rgbs)
+                video["gt_masks"] = [m[i:i + 1, :, :] for m in all_gt_masks]
+            # outputs = {
+            #     "logits": [
+            #         torch.zeros((n_frames, height, width))
+            #         for _ in range(len(query_masks[i:i + cfg.masks_batch_size]))
+            #     ],
+            #     "trajectories": None,
+            #     "visibilities": None,
+            #     "scores": [0] * cfg.masks_batch_size,
+            # }
             outputs = vos_evaluator.evaluate_video(video)
             pred_logits_list += outputs['logits']
-            pred_trajectories_list += outputs['trajectories'].permute(1, 0, 2, 3)
-            pred_visibilities_list += outputs['visibilities'].permute(1, 0, 2)
-            pred_scores += outputs['scores']
+            if outputs['trajectories'] is not None:
+                pred_trajectories_list += outputs['trajectories'].permute(1, 0, 2, 3)
+                pred_visibilities_list += outputs['visibilities'].permute(1, 0, 2)
+                pred_scores += outputs['scores']
         logits = torch.stack([torch.zeros_like(pred_logits_list[0])] + pred_logits_list, dim=1)
+        del pred_logits_list
 
         assert torch.all(logits[:, 0] == 0), "The first mask should always be the background with zero logits"
         n_frames = logits.shape[0]
-        if pred_trajectories_list[0] is not None:
+        if len(pred_trajectories_list) > 0:
             trajectories = torch.stack(pred_trajectories_list, dim=1)
             visibilities = torch.stack(pred_visibilities_list, dim=1)
             scores = torch.tensor(pred_scores)
@@ -282,6 +314,7 @@ def evaluate(cfg):
             trajectories = torch.zeros((n_frames, n_masks, 1, 2), dtype=torch.float32)
             visibilities = torch.zeros((n_frames, n_masks, 1), dtype=torch.float32)
             scores = torch.zeros(n_masks, dtype=torch.float32)
+        del pred_trajectories_list, pred_visibilities_list, pred_scores
 
         # Post process the predictions to set masks to zero for all frames before the query frame
         for i, gt_ti in enumerate(gt_ti_list):
@@ -291,6 +324,8 @@ def evaluate(cfg):
             gt_mask_resized = F.interpolate(gt_mask[None, None, :, :], target_hw, mode='nearest')[0, 0]
             logits[gt_ti, i + 1] = torch.where(gt_mask_resized.bool(), 1e8, -1e8)
         probs = F.softmax(logits, dim=1)
+        if cfg.dataset == "BDD100K" and not cfg.visualize_results:
+            del logits
 
         if torch.cuda.is_available():
             end.record()
@@ -319,6 +354,7 @@ def evaluate(cfg):
             # Probability mask -> index mask
             out_mask = torch.argmax(prob, dim=0)
             out_mask = (out_mask.detach().cpu().numpy()).astype(np.uint8)
+            # out_mask = (out_mask.detach().cpu().numpy()).astype(np.uint8 if cfg.dataset != 'BDD100K' else np.int16)
 
             if cfg.save_scores:
                 prob = (prob.detach().cpu().numpy() * 255).astype(np.uint8)
@@ -334,6 +370,7 @@ def evaluate(cfg):
                 out_img.save(os.path.join(this_out_path, frame[:-4] + '.png'))
 
             if cfg.save_scores:
+                import hickle as hkl
                 np_path = path.join(cfg.output, 'Scores', vid_name)
                 os.makedirs(np_path, exist_ok=True)
                 if ti == len(loader) - 1:
@@ -341,8 +378,16 @@ def evaluate(cfg):
                 if cfg.save_all or info['save'][0]:
                     hkl.dump(prob, path.join(np_path, f'{frame[:-4]}.hkl'), mode='w', compression='lzf')
 
+        # Save the mask
+        if cfg.save_all or info['save'][0]:
+            if cfg.save_overlapping_masks:
+                np_path = path.join(cfg.output, "../overlapping", vid_name)
+                os.makedirs(np_path, exist_ok=True)
+                torch.save(logits, os.path.join(np_path, f'logits.pt'))
+
         # Visualize results using wandb
-        if cfg.visualize_results and vid_id < cfg.max_videos_to_visualize:
+        if cfg.visualize_results and vid_id < cfg.max_videos_to_visualize and (cfg.vid_ids_to_visualize is None or
+                                                                               vid_id in cfg.vid_ids_to_visualize):
             n_frames, n_masks, n_points_per_mask, _ = trajectories.shape
             if hasattr(model, 'positive_points_per_mask'):
                 positive_points_per_mask = model.positive_points_per_mask
@@ -368,16 +413,19 @@ def evaluate(cfg):
                 query_scores=query_scores,
                 sam_masks_logits=logits[:, 1:, :, :].permute(1, 0, 2, 3),
                 positive_points_per_mask=positive_points_per_mask,
+                verbose=cfg.verbose_visualisations,
+                log_fmt=cfg.log_fmt,
             )
 
     print(f'Total processing time: {total_process_time}')
     print(f'Total processed frames: {total_frames}')
-    print(f'FPS: {total_frames / total_process_time}')
+    if total_process_time > 0:
+        print(f'FPS: {total_frames / total_process_time}')
     print(f'Max allocated memory (MB): {torch.cuda.max_memory_allocated() / (2 ** 20)}')
 
     wandb.run.summary["total_frames"] = total_frames
     wandb.run.summary["total_process_time"] = total_process_time
-    wandb.run.summary["fps"] = total_frames / total_process_time
+    wandb.run.summary["fps"] = total_frames / total_process_time if total_process_time > 0 else 0
 
     if not cfg.save_scores:
         print('Making zip...')
@@ -388,21 +436,46 @@ def evaluate(cfg):
         wandb.run.summary["work_dir"] = os.getcwd()
         wandb.run.summary["output_output"] = os.path.abspath(cfg.output)
 
-    # For D17, val split, get the evaluation results automatically
-    if cfg.dataset == "D17" and cfg.split == 'val':
+    # For D16/D17, val split, get the evaluation results automatically
+    if cfg.dataset in ["D16", "D17"] and cfg.split == 'val':
         print(os.path.abspath(cfg.output))
         print(os.path.abspath(cfg.d17_path))
+        sequences = 'all'
+        if cfg.vid_ids is not None:
+            sequences = sorted(os.listdir(cfg.output))
+            sequences = [s for s in sequences if s != "overlapping" and "." not in s]
+            print(f"Evaluating only on the sequences present in the results folder: {sequences}")
+
         df_global, df_per_seq = Davis2017Evaluator(
             results_path=cfg.output,
             davis_path=os.path.join(cfg.d17_path, "trainval"),
             set="val",
             task="semi-supervised",
+            year="2017" if cfg.dataset == "D17" else "2016",
+            sequences=sequences,
         ).evaluate()
 
         wandb.log({"df_global": wandb.Table(dataframe=df_global)})
         wandb.log({"df_per_seq": wandb.Table(dataframe=df_per_seq)})
 
         wandb.run.summary["score"] = df_global["J&F-Mean"].item()
+
+    if cfg.dataset == "BDD100K" and cfg.split == "val":
+        print(os.path.abspath(cfg.output))
+        print(os.path.abspath(cfg.bdd100k_path))
+
+        sequences = os.listdir(cfg.output)
+        print(f"Sequences to evaluate: {sequences}")
+        df_global, df_per_seq = BDD100KEvaluator(
+            results_path=cfg.output,
+            dataset_path=os.path.join(cfg.bdd100k_path, cfg.split),
+            sequences=sequences,
+        ).evaluate()
+
+        wandb.log({"df_global": wandb.Table(dataframe=df_global)})
+        wandb.log({"df_per_seq": wandb.Table(dataframe=df_per_seq)})
+
+        wandb.run.summary["n_sequences"] = len(sequences)
 
     print(f'Done. Find the results in {os.path.abspath(cfg.output)}')
 

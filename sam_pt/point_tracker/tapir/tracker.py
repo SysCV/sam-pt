@@ -10,6 +10,7 @@ class TapirPointTracker(PointTracker):
     """
     A point tracker that uses TAPIR from https://arxiv.org/abs/2306.08637 to track points.
     """
+
     def __init__(self, checkpoint_path, visibility_threshold):
         from .configs.tapir_config import get_config
         super().__init__()
@@ -42,7 +43,12 @@ class TapirPointTracker(PointTracker):
 
         checkpoint = np.load(self.checkpoint_path, allow_pickle=True).item()
         params, state = checkpoint["params"], checkpoint["state"]
-        tapir_model_kwargs = self.config.experiment_kwargs.config.shared_modules["tapir_model_kwargs"]
+        # tapir_model_kwargs = self.config.experiment_kwargs.config.shared_modules["tapir_model_kwargs"]
+        tapir_model_kwargs = {
+            "bilinear_interp_with_depthwise_conv": False,
+            "pyramid_level": 0,
+            "use_causal_conv": False,
+        }
 
         def _forward(rgbs, query_points):
             tapir = tapir_model.TAPIR(**tapir_model_kwargs)
@@ -76,6 +82,7 @@ class TapirPointTracker(PointTracker):
         rescale_factor_hw = torch.tensor(tapir_input_hw) / torch.tensor(original_hw)
 
         # 2. Prepare inputs
+        assert rgbs.dtype == torch.uint8
         rgbs_tapir = F.interpolate(rgbs.flatten(0, 1) / 255, tapir_input_hw, mode="bilinear", align_corners=False,
                                    antialias=True)
         rgbs_tapir = rgbs_tapir.unflatten(0, (batch_size, n_frames))

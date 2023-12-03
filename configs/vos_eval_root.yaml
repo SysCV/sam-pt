@@ -7,9 +7,10 @@ evaluator:
   _target_: sam_pt.vos_eval.evaluator.SamPtEvaluator
   _recursive_: false
 
-dataset: D17 # D16/D17/Y18/Y19/LV1/LV3/MOSE/G
+dataset: D17 # D16/D17/Y18/Y19/LV1/LV3/MOSE/BDD100K/G
 split: val # val/test
-masks_batch_size: 5
+simulate_interactive_point_correction: false
+masks_batch_size: 100
 seed: 72
 
 d16_path: ${hydra:runtime.cwd}/data/DAVIS/2016
@@ -18,6 +19,7 @@ y18_path: ${hydra:runtime.cwd}/data/YouTube2018
 y19_path: ${hydra:runtime.cwd}/data/YouTube
 lv_path: ${hydra:runtime.cwd}/data/long_video_set
 mose_path: ${hydra:runtime.cwd}/data/mose
+bdd100k_path: ${hydra:runtime.cwd}/data/bdd100k/vos
 generic_path: null # For generic (G) evaluation, point to a folder that contains "JPEGImages" and "Annotations"
 
 input_only_one_gt_mask_point: false # If true, only one gt mask point will be used for evaluation
@@ -30,10 +32,24 @@ flip: false
 output: eval_${dataset}_${split} # Path to save the results. If None, will save to the default path
 save_all: false # Save all frames. Useful only in YouTubeVOS/long-time video
 save_scores: false
+save_overlapping_masks: false # Save overlapping masks along with non-overlapping multi-object masks
 
 visualize_results: true # Whether to visualize the results using wandb
+verbose_visualisations: false # Whether to visualize the results in a verbose way (e.g. with input GIFs), slower
 vid_ids: null # Evaluate only on the videos specified in the list, e.g. [0,1,2] (or vid_ids=\[0,1,2\] in command line)
-max_videos_to_visualize: 30 # Max number of videos to visualize, used when visualize_results flag is set
+max_videos_to_visualize: 30 # Max number of videos to visualize, used when visualize_results flag is set, videos with id >= max_videos_to_visualize will not be visualized
+vid_ids_to_visualize: [ 0, 1, 2, 15 ] # Videos to visualize, used when visualize_results flag is set, null for all videos
+log_fmt: gif # gif/mp4
 
 max_videos: null # Max number of videos to process, useful with the visualize_results flag and for debugging
 max_frames: null # Max number of frames to process per video. Useful for debugging
+
+logging:
+  exp_id_verbose: ${logging.exp_id}_${dataset}_${split}_${seed}_${now:%Y.%m.%d_%H.%M.%S}
+
+
+hydra:
+  job:
+    chdir: True
+  run:
+    dir: outputs/${logging.exp_id_verbose}
