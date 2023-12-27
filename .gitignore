@@ -20,6 +20,9 @@ experiments
 *.jpg
 !/projects/DensePose/doc/images/*.jpg
 
+# python venv
+venv/
+
 # compilation and distribution
 __pycache__
 _ext
