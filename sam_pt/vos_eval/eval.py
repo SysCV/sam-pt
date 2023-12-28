@@ -20,8 +20,8 @@ from tqdm import tqdm
 from sam_pt.modeling.sam_pt import SamPt
 from sam_pt.modeling.sam_pt_interactive import SamPtInteractive
 from sam_pt.point_tracker.cotracker import CoTrackerPointTracker
-from sam_pt.utils.query_points import extract_kmedoid_points
-from sam_pt.utils.util import visualize_predictions, seed_all
+from sam_pt.mask_query_points.query_points import extract_kmedoid_points
+from sam_pt.util import visualize_predictions, seed_all
 from sam_pt.vos_eval.bdd100keval import BDD100KEvaluator
 from sam_pt.vos_eval.data.mask_mapper import MaskMapper
 from sam_pt.vos_eval.data.test_datasets import LongTestDataset, DAVISTestDataset, YouTubeVOSTestDataset, \

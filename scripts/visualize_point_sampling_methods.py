@@ -10,11 +10,11 @@ import numpy as np
 import torch
 from functools import partial
 
-from sam_pt.utils.query_points import extract_corner_points
-from sam_pt.utils.query_points import extract_kmedoid_points
-from sam_pt.utils.query_points import extract_mixed_points
-from sam_pt.utils.query_points import extract_random_mask_points
-from sam_pt.utils.util import seed_all
+from sam_pt.mask_query_points.query_points import extract_corner_points
+from sam_pt.mask_query_points.query_points import extract_kmedoid_points
+from sam_pt.mask_query_points.query_points import extract_mixed_points
+from sam_pt.mask_query_points.query_points import extract_random_mask_points
+from sam_pt.util import seed_all
 
 
 def mixed_point_id_to_marker_and_rescale(n_points, point_id):

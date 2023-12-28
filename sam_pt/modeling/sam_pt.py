@@ -13,9 +13,9 @@ from torch.nn import functional as F
 from tqdm import tqdm
 
 from sam_pt.point_tracker import PointTracker, SuperGluePointTracker
-from sam_pt.utils.query_points import extract_kmedoid_points, extract_random_mask_points, extract_corner_points, \
+from sam_pt.mask_query_points.query_points import extract_kmedoid_points, extract_random_mask_points, extract_corner_points, \
     extract_mixed_points
-from sam_pt.utils.util import PointVisibilityType
+from sam_pt.util import PointVisibilityType
 
 
 class SamPt(nn.Module):

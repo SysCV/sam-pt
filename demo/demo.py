@@ -29,7 +29,7 @@ from matplotlib import pyplot as plt
 from omegaconf import OmegaConf
 from time import sleep
 
-from sam_pt.utils.util import visualize_predictions
+from sam_pt.util import visualize_predictions
 
 
 @hydra.main(config_path="../configs", config_name="demo", version_base="1.1")

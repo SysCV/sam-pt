@@ -11,7 +11,7 @@ from segment_anything.modeling import Sam
 from torch import nn
 
 from sam_pt.modeling.sam_pt import SamPt
-from sam_pt.utils.util import visualize_predictions
+from sam_pt.util import visualize_predictions
 
 
 class SamBasedVisToVosAdapter(nn.Module):
