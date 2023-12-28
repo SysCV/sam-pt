@@ -41,6 +41,7 @@ class SamPt(nn.Module):
             use_patch_matching_filtering: bool,
             patch_size: int,
             patch_similarity_threshold: float,
+            no_mask_no_init_point: bool,
             use_point_reinit: bool,
             reinit_point_tracker_horizon: int,
             reinit_horizon: int,
@@ -110,6 +111,8 @@ class SamPt(nn.Module):
         self.patch_size = patch_size
         self.patch_similarity_threshold = patch_similarity_threshold
 
+        self.no_mask_no_init_point = no_mask_no_init_point
+
         self.use_point_reinit = use_point_reinit
         self.reinit_point_tracker_horizon = reinit_point_tracker_horizon
         self.reinit_horizon = reinit_horizon
@@ -168,20 +171,27 @@ class SamPt(nn.Module):
         assert images[0].dtype == torch.uint8, "Input images must be in uint8 format (0-255)"
 
         # Prepare queries
-        if video.get("query_masks") is not None:  # E.g., when evaluating on the VOS task
-            assert video.get("query_points") is None
-            print("SAM-PT: Using query masks")
-            query_masks = video["query_masks"].float()
-            query_points_timestep = video["query_point_timestep"]
-            query_points = self.extract_query_points(images, query_masks, query_points_timestep)
-            query_scores = None
-        elif video.get("query_points") is not None:  # E.g., when evaluating on the railway demo
-            print("SAM-PT: Using query points")
-            query_points = video["query_points"]
+        if self.no_mask_no_init_point:
+            print("SAM-PT: Getting query points automatically")
+            query_points = self.get_query_points(images)
             query_masks = self.extract_query_masks(images, query_points)
             query_scores = None
+            raise NotImplementedError(f"no auto point initialization implemented.")
         else:
-            raise ValueError("No query points or masks provided")
+            if video.get("query_masks") is not None:  # E.g., when evaluating on the VOS task
+                assert video.get("query_points") is None
+                print("SAM-PT: Using query masks")
+                query_masks = video["query_masks"].float()
+                query_points_timestep = video["query_point_timestep"]
+                query_points = self.extract_query_points(images, query_masks, query_points_timestep)
+                query_scores = None
+            elif video.get("query_points") is not None:  # E.g., when evaluating on the railway demo
+                print("SAM-PT: Using query points")
+                query_points = video["query_points"]
+                query_masks = self.extract_query_masks(images, query_points)
+                query_scores = None
+            else:
+                raise ValueError("No query points or masks provided")
         n_masks, n_points_per_mask, _ = query_points.shape
         assert query_masks.shape == (n_masks, height, width)
 
@@ -235,6 +245,9 @@ class SamPt(nn.Module):
 
         return results_dict
 
+    def get_query_points(self, images):
+        pass
+
     def extract_query_points(self, images, query_masks, query_points_timestep):
         """
         Extracts query points from the given images based on the provided masks and points' timesteps.
@@ -281,7 +294,9 @@ class SamPt(nn.Module):
                 point_selection_method=self.negative_point_selection_method,
                 points_per_mask=self.negative_points_per_mask,
             )
+            print(query_points_xy, negative_query_points_xy)
             query_points_xy = [torch.cat(x, dim=0) for x in zip(query_points_xy, negative_query_points_xy)]
+            print(query_points_xy)
         query_points_xy = torch.stack(query_points_xy, dim=0)
         query_points_timestep = query_points_timestep[:, None, None].repeat(1, query_points_xy.shape[1], 1)
         query_points = torch.concat([query_points_timestep, query_points_xy], dim=2)

@@ -480,7 +480,7 @@ def evaluate(cfg):
     print(f'Done. Find the results in {os.path.abspath(cfg.output)}')
 
 
-@hydra.main(config_path="../../configs", config_name="vos_eval_root", version_base="1.1")
+@hydra.main(config_path="../../configs", config_name="vos_eval_test", version_base="1.1")
 def main(cfg: DictConfig) -> None:
     evaluate(cfg)
 

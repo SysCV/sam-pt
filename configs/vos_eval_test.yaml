@@ -45,7 +45,7 @@ max_videos: null # Max number of videos to process, useful with the visualize_re
 max_frames: null # Max number of frames to process per video. Useful for debugging
 
 logging:
-  exp_id_verbose: ${logging.exp_id}_${dataset}_${split}_${seed}_${now:%Y.%m.%d_%H.%M.%S}
+  exp_id_verbose: ${logging.exp_id}_${dataset}_${split}_${seed}_${now:%Y.%m.%d_%H.%M.%S}_test
 
 
 hydra:
