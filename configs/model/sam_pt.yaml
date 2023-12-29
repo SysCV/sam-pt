@@ -24,7 +24,7 @@ use_patch_matching_filtering: false
 patch_size: 3
 patch_similarity_threshold: 0.01
 
-no_mask_no_init_point: false
+no_mask_no_init_point: true
 
 use_point_reinit: false
 reinit_point_tracker_horizon: 24

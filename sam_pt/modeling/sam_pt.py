@@ -173,10 +173,10 @@ class SamPt(nn.Module):
         # Prepare queries
         if self.no_mask_no_init_point:
             print("SAM-PT: Getting query points automatically")
-            query_points = self.get_query_points(images)
+            query_points = self.get_query_points(images, height, width)
+            print("Points extracted!")
             query_masks = self.extract_query_masks(images, query_points)
             query_scores = None
-            raise NotImplementedError(f"no auto point initialization implemented.")
         else:
             if video.get("query_masks") is not None:  # E.g., when evaluating on the VOS task
                 assert video.get("query_points") is None
@@ -245,8 +245,22 @@ class SamPt(nn.Module):
 
         return results_dict
 
-    def get_query_points(self, images):
-        pass
+    def get_query_points(self, images, height, width):
+        n_points_per_mask = self.positive_points_per_mask + self.negative_points_per_mask
+
+        n_masks = 1 # for the moment, we only focus on one object
+
+        query_points = torch.empty((n_masks, n_points_per_mask, 3))
+
+        query_points[0, :, 0] = 0.
+
+        query_points[0, :self.positive_points_per_mask, 1] = torch.randint(0, width, (self.positive_points_per_mask,))
+        query_points[0, :self.positive_points_per_mask, 2] = torch.randint(0, height, (self.positive_points_per_mask,))
+
+        query_points[0, self.positive_points_per_mask:, 1] = torch.randint(0, width, (self.negative_points_per_mask,))
+        query_points[0, self.positive_points_per_mask:, 2] = torch.randint(0, height, (self.negative_points_per_mask,))
+
+        return query_points
 
     def extract_query_points(self, images, query_masks, query_points_timestep):
         """
@@ -294,9 +308,7 @@ class SamPt(nn.Module):
                 point_selection_method=self.negative_point_selection_method,
                 points_per_mask=self.negative_points_per_mask,
             )
-            print(query_points_xy, negative_query_points_xy)
             query_points_xy = [torch.cat(x, dim=0) for x in zip(query_points_xy, negative_query_points_xy)]
-            print(query_points_xy)
         query_points_xy = torch.stack(query_points_xy, dim=0)
         query_points_timestep = query_points_timestep[:, None, None].repeat(1, query_points_xy.shape[1], 1)
         query_points = torch.concat([query_points_timestep, query_points_xy], dim=2)
