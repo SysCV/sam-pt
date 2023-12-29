@@ -15,6 +15,8 @@ from tqdm import tqdm
 from sam_pt.point_tracker import PointTracker, SuperGluePointTracker
 from sam_pt.mask_query_points.query_points import extract_kmedoid_points, extract_random_mask_points, extract_corner_points, \
     extract_mixed_points
+from sam_pt.no_mask_no_init_point.point_initialization import random_point_initialization
+from sam_pt.no_mask_no_init_point.point_selection import ransac_point_selector
 from sam_pt.util import PointVisibilityType
 
 
@@ -174,7 +176,6 @@ class SamPt(nn.Module):
         if self.no_mask_no_init_point:
             print("SAM-PT: Getting query points automatically")
             query_points = self.get_query_points(images, height, width)
-            print("Points extracted!")
             query_masks = self.extract_query_masks(images, query_points)
             query_scores = None
         else:
@@ -250,15 +251,36 @@ class SamPt(nn.Module):
 
         n_masks = 1 # for the moment, we only focus on one object
 
-        query_points = torch.empty((n_masks, n_points_per_mask, 3))
+        if False :
 
-        query_points[0, :, 0] = 0.
+            query_points = torch.empty((n_masks, n_points_per_mask, 3))
 
-        query_points[0, :self.positive_points_per_mask, 1] = torch.randint(0, width, (self.positive_points_per_mask,))
-        query_points[0, :self.positive_points_per_mask, 2] = torch.randint(0, height, (self.positive_points_per_mask,))
+            query_points[0, :, 0] = 0.
 
-        query_points[0, self.positive_points_per_mask:, 1] = torch.randint(0, width, (self.negative_points_per_mask,))
-        query_points[0, self.positive_points_per_mask:, 2] = torch.randint(0, height, (self.negative_points_per_mask,))
+            query_points[0, :self.positive_points_per_mask, 1] = torch.randint(0, width, (self.positive_points_per_mask,))
+            query_points[0, :self.positive_points_per_mask, 2] = torch.randint(0, height, (self.positive_points_per_mask,))
+
+            query_points[0, self.positive_points_per_mask:, 1] = torch.randint(0, width, (self.negative_points_per_mask,))
+            query_points[0, self.positive_points_per_mask:, 2] = torch.randint(0, height, (self.negative_points_per_mask,))
+        else :
+            n_init_point_per_mask = 500
+            timesteps = [0.]
+
+            potential_query_points = random_point_initialization(n_masks, timesteps, n_init_point_per_mask, width, height)
+            print("Random point initialization")
+            trajectories, visibilities = self._track_points(images, potential_query_points)
+            print("Point trajectories computed")
+
+            p_query_points_positive, p_query_points_negative = ransac_point_selector(trajectories, visibilities)
+            print("Point classification foreground/background done")
+
+            random_positive_indicies = torch.randint(p_query_points_positive.shape[1], (self.positive_points_per_mask,))
+            random_negative_indicies = torch.randint(p_query_points_negative.shape[1], (self.negative_points_per_mask,))
+
+            query_points_positive = p_query_points_positive[:, random_positive_indicies, :].reshape(-1, self.positive_points_per_mask, 3)
+            query_points_negative = p_query_points_negative[:, random_negative_indicies, :].reshape(-1, self.negative_points_per_mask, 3)
+
+            query_points = torch.cat((query_points_positive, query_points_negative), dim=1)
 
         return query_points
 
