@@ -23,6 +23,8 @@ def ransac_point_selector(trajectories, visibilities):
     negative_points = filtered_points_frame0[inlier_mask]
     positive_points = filtered_points_frame0[~inlier_mask]
 
+    assert positive_points.shape[0] > 0, "no foreground point detected"
+
     # remake them in the good format
     negative_points = torch.cat((torch.zeros(negative_points.shape[0], 1), negative_points), dim=1).reshape(1, -1, 3)
     positive_points = torch.cat((torch.zeros(positive_points.shape[0], 1), positive_points), dim=1).reshape(1, -1, 3)
