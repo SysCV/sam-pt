@@ -10,6 +10,7 @@ artifacts
 !/data/demo_data/query_points__street.txt
 /outputs
 /output
+/runs
 instant_test_output
 inference_test_output
 experiments

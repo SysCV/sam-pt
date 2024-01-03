@@ -12,6 +12,9 @@ from torch import nn
 from torch.nn import functional as F
 from tqdm import tqdm
 
+from ultralytics import YOLO
+from cv2 import fillPoly
+
 from sam_pt.point_tracker import PointTracker, SuperGluePointTracker
 from sam_pt.mask_query_points.query_points import extract_kmedoid_points, extract_random_mask_points, extract_corner_points, \
     extract_mixed_points
@@ -44,6 +47,7 @@ class SamPt(nn.Module):
             patch_size: int,
             patch_similarity_threshold: float,
             no_mask_no_init_point: bool,
+            yolo_checkpoint: str,
             use_point_reinit: bool,
             reinit_point_tracker_horizon: int,
             reinit_horizon: int,
@@ -114,6 +118,8 @@ class SamPt(nn.Module):
         self.patch_similarity_threshold = patch_similarity_threshold
 
         self.no_mask_no_init_point = no_mask_no_init_point
+        if no_mask_no_init_point:
+            self.yolo_checkpoint =  yolo_checkpoint
 
         self.use_point_reinit = use_point_reinit
         self.reinit_point_tracker_horizon = reinit_point_tracker_horizon
@@ -123,6 +129,11 @@ class SamPt(nn.Module):
     @property
     def device(self):
         return self._sam.device
+
+    def instanciate_yolo(self):
+        if self.no_mask_no_init_point:
+            self.yolo = YOLO(self.yolo_checkpoint)
+            self.yolo_counter = 0
 
     def forward(self, video):
         """
@@ -174,9 +185,20 @@ class SamPt(nn.Module):
 
         # Prepare queries
         if self.no_mask_no_init_point:
-            print("SAM-PT: Getting query points automatically")
-            query_points = self.get_query_points(images, height, width)
-            query_masks = self.extract_query_masks(images, query_points)
+            print("SAM-PT: Getting query points automatically, using yolo", end="")
+            self.yolo_counter += 1
+            yolo_results = self.yolo.predict(images[0:1].float() / 255, save=True, name=f"video_{self.yolo_counter}_",conf=0.7)
+            if yolo_results[0].masks is not None:
+                yolo_mask_object = yolo_results[0].masks.cpu()
+                yolo_mask_indx = np.vstack(yolo_mask_object.xy).astype(np.int32)
+            else:
+                print("No object detected by yolo!")
+                yolo_mask_indx = np.array([[0, 0], [height-1, 0], [0, (width-1)//2], [height-1, (width-1)//2]])
+            yolo_mask = np.zeros((height, width))
+            yolo_mask = fillPoly(yolo_mask, [yolo_mask_indx], color=1)
+            query_masks = torch.from_numpy(yolo_mask).float().unsqueeze(0)
+            query_points_timestep = torch.zeros((1,))
+            query_points = self.extract_query_points(images, query_masks, query_points_timestep)
             query_scores = None
         else:
             if video.get("query_masks") is not None:  # E.g., when evaluating on the VOS task
@@ -273,13 +295,25 @@ class SamPt(nn.Module):
 
             p_query_points_positive, p_query_points_negative = ransac_point_selector(trajectories, visibilities)
             print("Point classification foreground/background done")
-
+            """
             random_positive_indicies = torch.randint(p_query_points_positive.shape[1], (self.positive_points_per_mask,))
             random_negative_indicies = torch.randint(p_query_points_negative.shape[1], (self.negative_points_per_mask,))
 
             query_points_positive = p_query_points_positive[:, random_positive_indicies, :].reshape(-1, self.positive_points_per_mask, 3)
             query_points_negative = p_query_points_negative[:, random_negative_indicies, :].reshape(-1, self.negative_points_per_mask, 3)
+            """
 
+            def select_points(tensor, num_points):
+                """Select or duplicate points from the tensor to get exactly num_points."""
+                if tensor.shape[1] < num_points:
+                    # If there are not enough points, duplicate them
+                    repeats = (num_points + tensor.shape[1] - 1) // tensor.shape[1]  # Calculate how many times to repeat
+                    tensor = tensor.repeat(1, repeats, 1)  # Repeat the tensor
+                return tensor[:, :num_points, :]  # Select the first num_points
+
+            # Use the select_points function to get the desired number of points
+            query_points_positive = select_points(p_query_points_positive, self.positive_points_per_mask).reshape(-1, self.positive_points_per_mask, 3)
+            query_points_negative = select_points(p_query_points_negative, self.negative_points_per_mask).reshape(-1, self.negative_points_per_mask, 3)
             query_points = torch.cat((query_points_positive, query_points_negative), dim=1)
 
         return query_points

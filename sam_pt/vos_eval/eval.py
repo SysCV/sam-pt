@@ -137,6 +137,8 @@ def evaluate(cfg):
     # Load our checkpoint
     model = instantiate(cfg.model)
     model = model.to("cuda" if torch.cuda.is_available() else "cpu").eval()
+    model.instanciate_yolo()
+
     # If CoTracker is used, the seed needs to be set again since building the model changed the seed
     if isinstance(model, SamPt) and isinstance(model.point_tracker, CoTrackerPointTracker):
         print('CoTracker is used, setting seed again.')

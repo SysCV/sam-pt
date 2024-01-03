@@ -25,6 +25,7 @@ patch_size: 3
 patch_similarity_threshold: 0.01
 
 no_mask_no_init_point: true
+yolo_checkpoint: ${hydra:runtime.cwd}/models/yolo_ckpts/yolov8x-seg.pt
 
 use_point_reinit: false
 reinit_point_tracker_horizon: 24
