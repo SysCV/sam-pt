@@ -48,6 +48,7 @@ class SamPt(nn.Module):
             patch_similarity_threshold: float,
             no_mask_no_init_point: bool,
             yolo_checkpoint: str,
+            use_ransac: bool,
             use_point_reinit: bool,
             reinit_point_tracker_horizon: int,
             reinit_horizon: int,
@@ -86,6 +87,10 @@ class SamPt(nn.Module):
             The similarity threshold value for patch matching. Above the threshold, points are marked as non-visible.
         use_point_reinit : bool
             If True, enables point reinitialization.
+        yolo_checkpoint : str
+            The path to the YOLO model checkpoint file. If this is not None, YOLO will be used for object detection.
+        use_ransac : bool
+            If True, RANSAC will be used for outlier detection in the point tracking. Cannot be True if yolo_checkpoint is not None.
         reinit_point_tracker_horizon : int
             The number of frames to run the point tracker for before performing reinitialization.
         reinit_horizon : int
@@ -119,7 +124,10 @@ class SamPt(nn.Module):
 
         self.no_mask_no_init_point = no_mask_no_init_point
         if no_mask_no_init_point:
-            self.yolo_checkpoint =  yolo_checkpoint
+            self.yolo_checkpoint = yolo_checkpoint
+            self.use_ransac = use_ransac
+            assert self.yolo_checkpoint is not None or self.use_ransac, "Either yolo_checkpoint or use_ransac must be True"
+            assert not (self.yolo_checkpoint is not None and self.use_ransac), "Both yolo_checkpoint and use_ransac cannot be True at the same time"
 
         self.use_point_reinit = use_point_reinit
         self.reinit_point_tracker_horizon = reinit_point_tracker_horizon
@@ -132,8 +140,9 @@ class SamPt(nn.Module):
 
     def instanciate_yolo(self):
         if self.no_mask_no_init_point:
-            self.yolo = YOLO(self.yolo_checkpoint)
-            self.yolo_counter = 0
+            if self.yolo_checkpoint is not None:
+                self.yolo = YOLO(self.yolo_checkpoint)
+                self.yolo_counter = 0
 
     def forward(self, video):
         """
@@ -185,20 +194,26 @@ class SamPt(nn.Module):
 
         # Prepare queries
         if self.no_mask_no_init_point:
-            print("SAM-PT: Getting query points automatically, using yolo", end="")
-            self.yolo_counter += 1
-            yolo_results = self.yolo.predict(images[0:1].float() / 255, save=True, name=f"video_{self.yolo_counter}_",conf=0.7)
-            if yolo_results[0].masks is not None:
-                yolo_mask_object = yolo_results[0].masks.cpu()
-                yolo_mask_indx = np.vstack(yolo_mask_object.xy).astype(np.int32)
+            if self.yolo_checkpoint is not None:
+                # Use YOLO to get query points
+                print("SAM-PT: Getting query points automatically, using yolo", end="")
+                self.yolo_counter += 1
+                yolo_results = self.yolo.predict(images[0:1].float() / 255, save=True, name=f"video_{self.yolo_counter}_",conf=0.7)
+                if yolo_results[0].masks is not None:
+                    yolo_mask_object = yolo_results[0].masks.cpu()
+                    yolo_mask_indx = np.vstack(yolo_mask_object.xy).astype(np.int32)
+                else:
+                    print("No object detected by yolo!")
+                    yolo_mask_indx = np.array([[0, 0], [height-1, 0], [0, (width-1)//2], [height-1, (width-1)//2]])
+                yolo_mask = np.zeros((height, width))
+                yolo_mask = fillPoly(yolo_mask, [yolo_mask_indx], color=1)
+                query_masks = torch.from_numpy(yolo_mask).float().unsqueeze(0)
+                query_points_timestep = torch.zeros((1,))
+                query_points = self.extract_query_points(images, query_masks, query_points_timestep)
             else:
-                print("No object detected by yolo!")
-                yolo_mask_indx = np.array([[0, 0], [height-1, 0], [0, (width-1)//2], [height-1, (width-1)//2]])
-            yolo_mask = np.zeros((height, width))
-            yolo_mask = fillPoly(yolo_mask, [yolo_mask_indx], color=1)
-            query_masks = torch.from_numpy(yolo_mask).float().unsqueeze(0)
-            query_points_timestep = torch.zeros((1,))
-            query_points = self.extract_query_points(images, query_masks, query_points_timestep)
+                print("SAM-PT: Using query points")
+                query_points = self.get_query_points(images, height, width)
+                query_masks = None
             query_scores = None
         else:
             if video.get("query_masks") is not None:  # E.g., when evaluating on the VOS task
@@ -273,18 +288,7 @@ class SamPt(nn.Module):
 
         n_masks = 1 # for the moment, we only focus on one object
 
-        if False :
-
-            query_points = torch.empty((n_masks, n_points_per_mask, 3))
-
-            query_points[0, :, 0] = 0.
-
-            query_points[0, :self.positive_points_per_mask, 1] = torch.randint(0, width, (self.positive_points_per_mask,))
-            query_points[0, :self.positive_points_per_mask, 2] = torch.randint(0, height, (self.positive_points_per_mask,))
-
-            query_points[0, self.positive_points_per_mask:, 1] = torch.randint(0, width, (self.negative_points_per_mask,))
-            query_points[0, self.positive_points_per_mask:, 2] = torch.randint(0, height, (self.negative_points_per_mask,))
-        else :
+        if self.use_ransac:
             n_init_point_per_mask = 500
             timesteps = [0.]
 
@@ -315,6 +319,16 @@ class SamPt(nn.Module):
             query_points_positive = select_points(p_query_points_positive, self.positive_points_per_mask).reshape(-1, self.positive_points_per_mask, 3)
             query_points_negative = select_points(p_query_points_negative, self.negative_points_per_mask).reshape(-1, self.negative_points_per_mask, 3)
             query_points = torch.cat((query_points_positive, query_points_negative), dim=1)
+
+        else:
+            query_points = torch.empty((n_masks, n_points_per_mask, 3))
+
+            query_points[0, :, 0] = 0.
+            query_points[0, :self.positive_points_per_mask, 1] = torch.randint(0, width, (self.positive_points_per_mask,))
+            query_points[0, :self.positive_points_per_mask, 2] = torch.randint(0, height, (self.positive_points_per_mask,))
+
+            query_points[0, self.positive_points_per_mask:, 1] = torch.randint(0, width, (self.negative_points_per_mask,))
+            query_points[0, self.positive_points_per_mask:, 2] = torch.randint(0, height, (self.negative_points_per_mask,))
 
         return query_points
 

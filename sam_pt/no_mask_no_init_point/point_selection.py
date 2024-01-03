@@ -3,6 +3,19 @@ import numpy as np
 import cv2
 
 def ransac_point_selector(trajectories, visibilities):
+    """
+    Selects points from trajectories using the RANSAC algorithm.
+
+    Args:
+        trajectories (torch.Tensor): The trajectories as float32 tensor
+                                     of shape (num_frames, n_masks, n_points_per_mask, 2).
+        visibilities (torch.Tensor): The visibilities as float32 tensor
+                                     of shape (num_frames, n_masks, n_points_per_mask).
+
+    Returns:
+        positive_points (torch.Tensor): Inliers after applying the RANSAC algorithm.
+        negative_points (torch.Tensor): Outliers after applying the RANSAC algorithm.
+    """
     step = 15
 
     assert trajectories.shape[0] > step, "Insufficient frames for comparison."
