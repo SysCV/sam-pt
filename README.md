@@ -7,7 +7,7 @@
 
 ![SAM-PT design](assets/figure-1.png?raw=true)
 
-We propose SAM-PT, an extension of the [Segment Anything Model](https://github.com/facebookresearch/segment-anything) (SAM) for zero-shot video segmentation. Our work offers a simple yet effective point-based perspective in video object segmentation research. For more details, refer to our paper. Our code, models, and evaluation tools will be released soon. Stay tuned!
+We propose SAM-PT, an extension of the [Segment Anything Model](https://github.com/facebookresearch/segment-anything) (SAM) for zero-shot video segmentation. Our work offers a simple yet effective point-based perspective in video object segmentation research. For more details, refer to our paper. 
 
 ## Video Object Segmentation Demo
 
