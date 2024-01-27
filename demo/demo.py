@@ -28,8 +28,9 @@ from hydra.utils import instantiate
 from matplotlib import pyplot as plt
 from omegaconf import OmegaConf
 from time import sleep
-
-from sam_pt.utils.util import visualize_predictions
+import sys
+sys.path.append('/home/zgholami/sam-pt/sam_pt/utils')
+from util import visualize_predictions
 
 
 @hydra.main(config_path="../configs", config_name="demo", version_base="1.1")
@@ -163,7 +164,7 @@ def visualize_and_save_predictions(rgbs, query_points, target_hw, positive_point
             target_hw,
             mode='bilinear'
         ).type(torch.uint8),
-        step=0,
+        step=10,
         query_points=query_points,
         trajectories=trajectories,
         visibilities=visibilities,
@@ -186,24 +187,30 @@ def visualize_and_save_predictions(rgbs, query_points, target_hw, positive_point
             break
         i += 1
     cv2.destroyAllWindows()
-
+import scipy.io as sio
 
 def load_demo_data(frames_path, query_points_path, frame_stride=1, longest_side_length=None,
                    annot_size=8, annot_line_width=4, max_frames=None):
     assert query_points_path is not None
 
     # Load frames
-    frames = sorted(glob.glob(os.path.join(frames_path, '*.jpg')))
-    frames += sorted(glob.glob(os.path.join(frames_path, '*.png')))
-    assert len(frames) > 0, f"No frames found in {frames_path}"
+    # frames = sorted(glob.glob(os.path.join(frames_path, '*.jpg')))
+    # frames += sorted(glob.glob(os.path.join(frames_path, '*.png')))
+    mat_contents = sio.loadmat(frames_path)
+    patient_info = mat_contents['Patient_info']
+    cine= patient_info['cropped'][0][0]
+    h , w, num_frames = cine.shape
+    frames= cine
 
-    frames = frames[::frame_stride]
+    assert num_frames> 0, f"No frames found in {frames_path}"
+
+    frames = frames[:,:,::frame_stride]
     if max_frames is not None:
-        frames = frames[:max_frames]
+        frames = frames[:,:,:max_frames]
 
     rgbs = []
-    for frame in frames:
-        img = cv2.imread(frame)
+    for frame in range(frames.shape[2]):
+        img = frames[:,:,frame] # cv2.imread(frame)
         img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
         img = torch.from_numpy(img).permute(2, 0, 1)
 

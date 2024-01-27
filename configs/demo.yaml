@@ -6,16 +6,19 @@ defaults:
 logging:
   wandb:
     project: demo
-
+    log_code_path: /scratch/st-puranga-1/users/Zahragh/test/graphssl/sam_pt/outputs/${now:%Y-%m-%d_%H-%M-%S}
+hydra:
+  run:
+    dir: /scratch/st-puranga-1/users/Zahragh/test/graphssl/sam_pt/outputs/${now:%Y-%m-%d_%H-%M-%S}
 model:
   iterative_refinement_iterations: 12
   add_other_objects_positive_points_as_negative_points: true
-  use_point_reinit: false
+  use_point_reinit: true
   positive_points_per_mask: -1
   negative_points_per_mask: -1
 
-frames_path: ${hydra:runtime.cwd}/data/demo_data/bees # Path to the folder with frames of the video
-query_points_path: ${hydra:runtime.cwd}/data/demo_data/query_points__bees.txt # Path or null
+frames_path: /home/zgholami/sam-pt/data/demo_data/echo.mat #data/demo_data/bees # Path to the folder with frames of the video
+query_points_path: /home/zgholami/sam-pt/data/demo_data/query_points__echo.txt # Path or null
 
 longest_side_length: 1024 # Resize the image so that the longest side is of this length
 frame_stride: 1 # Evaluate on every n frames
@@ -23,5 +26,5 @@ max_frames: null # Maximum number of video frames to evaluate for
 
 seed: 72
 
-annot_size: 16 # Size of the point annotations in visualisations
-annot_line_width: 6 # Line width of the point annotations in visualisations
+annot_size: 6 # Size of the point annotations in visualisations
+annot_line_width: 2 # Line width of the point annotations in visualisations
