@@ -61,3 +61,33 @@ _darcs
 /projects/*/datasets
 /models
 /snippet
+
+# Testing related
+.pytest_cache/
+.coverage
+htmlcov/
+coverage.xml
+.tox/
+*.cover
+*.py,cover
+.hypothesis/
+.coverage.*
+
+# Claude settings
+.claude/*
+
+# Poetry
+# Note: Do not ignore poetry.lock - it should be committed
+
+# Virtual environments
+venv/
+ENV/
+env/
+.venv/
+.env
+
+# IDE and OS files
+.DS_Store
+Thumbs.db
+*.sublime-project
+*.sublime-workspace
